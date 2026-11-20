@@ -34,9 +34,6 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Install dependencies & build web bundle
         env:
           VITE_APP_VERSION: ${{ env.APP_VERSION_NAME }}
@@ -95,7 +92,8 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          BUILD_TOOLS_DIR=$(ls -d "$ANDROID_HOME/build-tools"/* | sort -V | tail -n 1)
+          ANDROID_SDK_DIR="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          BUILD_TOOLS_DIR=$(ls -d "$ANDROID_SDK_DIR/build-tools"/* | sort -V | tail -n 1)
           UNSIGNED_APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
           if [ ! -f "$UNSIGNED_APK" ]; then
             UNSIGNED_APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n 1)
