@@ -75,6 +75,32 @@ jobs:
           '
           chmod +x android/gradlew
 
+      - name: Fix Kotlin stdlib duplicate classes in build.gradle
+        run: |
+          node -e '
+            const fs = require("fs");
+            const groovyBlock = `
+          dependencies {
+              constraints {
+                  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22") {
+                      because("kotlin-stdlib-jdk7 is now a part of kotlin-stdlib")
+                  }
+                  implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22") {
+                      because("kotlin-stdlib-jdk8 is now a part of kotlin-stdlib")
+                  }
+              }
+          }
+          `.replace(/^          /gm, "");
+            for (const file of ["android/app/build.gradle", "android/app/build.gradle.kts"]) {
+              if (!fs.existsSync(file)) continue;
+              const txt = fs.readFileSync(file, "utf8");
+              if (!txt.includes("kotlin-stdlib-jdk7:1.8.22")) {
+                fs.writeFileSync(file, txt + "\n" + groovyBlock);
+                console.log("Injected Kotlin stdlib constraints into " + file);
+              }
+            }
+          '
+
       - name: Build Android release APK
         run: |
           cd android
