@@ -1,0 +1,6 @@
+{
+  "name": "Leonida Companion — GTA VI",
+  "description": "Responsiv companion-app för Grand Theft Auto VI (PS5 & Xbox Series X|S) med patch notes, interaktiv Leonida-karta, 100%-checklista, radio och fuskkoder.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

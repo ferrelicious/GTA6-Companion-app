@@ -1,0 +1,53 @@
+@import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-display: 'Outfit', system-ui, sans-serif;
+    --font-sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    background-color: #0D0F14;
+    color: #F1F5F9;
+    font-family: var(--font-sans);
+    overscroll-behavior-y: contain;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .font-mono {
+    font-family: var(--font-mono);
+  }
+}
+
+/* Custom utility classes for Vice City / Leonida dark glass surfaces */
+.leonida-glass {
+  background-color: rgba(20, 23, 32, 0.84);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.leonida-surface {
+  background-color: #141720;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Subtle horizontal scrollbar hiding for filter strips */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

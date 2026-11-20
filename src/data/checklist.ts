@@ -1,0 +1,222 @@
+import { ChecklistCategoryMeta, ChecklistItem } from '../types';
+
+export const CHECKLIST_CATEGORIES: ChecklistCategoryMeta[] = [
+  {
+    id: 'main_missions',
+    label: 'Huvuduppdrag',
+    description: 'Berättelsens nyckelkapitel med Lucia och Jason genom Leonida.',
+    weightLabel: '50% av 100%',
+  },
+  {
+    id: 'strangers_freaks',
+    label: 'Sidouppdrag (Strangers & Freaks)',
+    description: 'Karaktärsdrivna sidoberättelser i Vice City, Grassrivers och Keys.',
+    weightLabel: '15% av 100%',
+  },
+  {
+    id: 'collectibles',
+    label: 'Samlarobjekt',
+    description: 'Gömda paket, graffitikonst, vrakdelar och hemliga inspelningar.',
+    weightLabel: '15% av 100%',
+  },
+  {
+    id: 'vehicle_challenges',
+    label: 'Fordonsutmaningar',
+    description: 'Stunt-hopp, gaturace, båtkappsegling och flygskola.',
+    weightLabel: '10% av 100%',
+  },
+  {
+    id: 'random_events',
+    label: 'Slumpmässiga händelser',
+    description: 'Dynamiska världshändelser längs vägar, stränder och i träsket.',
+    weightLabel: '10% av 100%',
+  },
+];
+
+export const INITIAL_CHECKLIST: ChecklistItem[] = [
+  // Huvuduppdrag
+  {
+    id: 'chk-m1',
+    categoryId: 'main_missions',
+    title: 'Prolog: Port Gellhorn-tillslaget',
+    region: 'Port Gellhorn',
+    requirement: 'Slutför öppningsrånet och flyktsekvensen längs Kustvägen.',
+    reward: 'Låser upp fri utforskning i västra Leonida',
+  },
+  {
+    id: 'chk-m2',
+    categoryId: 'main_missions',
+    title: 'Neon på Ocean Drive',
+    region: 'Vice Beach',
+    requirement: 'Etablera första gömstället med Lucia och Jason i Vice Beach.',
+    reward: 'Safe House: Ocean View Suite',
+  },
+  {
+    id: 'chk-m3',
+    categoryId: 'main_missions',
+    title: 'Träskets lag',
+    region: 'Grassrivers',
+    requirement: 'Kör träskbåt genom dimman och hämta upp smuggelgods.',
+    reward: '$45 000 + Airboat-tillgång',
+  },
+  {
+    id: 'chk-m4',
+    categoryId: 'main_missions',
+    title: 'Venetian Heist',
+    region: 'Downtown Vice City',
+    requirement: 'Genomför båt- och helikopterkuppen i Vice Bay.',
+    reward: '$280 000 + Ny utrustning',
+  },
+  {
+    id: 'chk-m5',
+    categoryId: 'main_missions',
+    title: 'Nyckeln till Leonida Keys',
+    region: 'Leonida Keys',
+    requirement: 'Stäng ner kartellens sjötransport under stormnatten.',
+    reward: 'Låser upp hela södra arkipelagen',
+  },
+  {
+    id: 'chk-m6',
+    categoryId: 'main_missions',
+    title: 'Final: Trust & Consequences',
+    region: 'Vice City / Lake Leonida',
+    requirement: 'Slutför huvudberättelsens sista stöt.',
+    reward: 'Huvudberättelse avklarad',
+  },
+
+  // Sidouppdrag (Strangers & Freaks)
+  {
+    id: 'chk-s1',
+    categoryId: 'strangers_freaks',
+    title: 'Leonida Man: Virala upptåg',
+    region: 'Vice Beach',
+    requirement: 'Hjälp influencern Dre med tre spektakulära stunt-inspelningar.',
+    reward: 'Social Feed-verifiering + $15 000',
+  },
+  {
+    id: 'chk-s2',
+    categoryId: 'strangers_freaks',
+    title: 'Alligatorkungen i Grassrivers',
+    region: 'Grassrivers',
+    requirement: 'Fånga och märk tre sällsynta albino-alligatorer åt forskaren Bo.',
+    reward: 'Unik jägarhatt + $22 000',
+  },
+  {
+    id: 'chk-s3',
+    categoryId: 'strangers_freaks',
+    title: 'Nattklubbens skugga',
+    region: 'Downtown Vice City',
+    requirement: 'Spåra utpressaren bakom Club Malibu Reloaded.',
+    reward: 'VIP-entré & passiv inkomst',
+  },
+  {
+    id: 'chk-s4',
+    categoryId: 'strangers_freaks',
+    title: 'Skattletaren på Gator Keys',
+    region: 'Leonida Keys',
+    requirement: 'Hitta alla 4 skeppsvraksjournaler åt gamla kapten Vance.',
+    reward: 'Guldklocka & dykarbonus',
+  },
+
+  // Samlarobjekt
+  {
+    id: 'chk-c1',
+    categoryId: 'collectibles',
+    title: 'Alla 50 Gömda paket',
+    region: 'Hela Leonida',
+    requirement: 'Samla samtliga kurir- och smuggelpaket utspridda på kartan.',
+    reward: '$250 000 Totalbonus',
+  },
+  {
+    id: 'chk-c2',
+    categoryId: 'collectibles',
+    title: 'Vice City Neon-graffiti (25/25)',
+    region: 'Vice City',
+    requirement: 'Fotografera eller måla över alla 25 väggmålningar i stadskärnan.',
+    reward: 'Specialdesignad Spray-outfit',
+  },
+  {
+    id: 'chk-c3',
+    categoryId: 'collectibles',
+    title: 'Sjunkna smuggelkistor (15/15)',
+    region: 'Leonida Keys & Vice Bay',
+    requirement: 'Dyk och bärga samtliga vattentäta kistor längs kusten.',
+    reward: 'Gratis ubåtsuthyrning',
+  },
+  {
+    id: 'chk-c4',
+    categoryId: 'collectibles',
+    title: 'Hemliga kassettband (10/10)',
+    region: 'Hela Leonida',
+    requirement: 'Hitta de 10 retro-kassetterna från Vice Citys 80-talshistoria.',
+    reward: 'Låser upp bonusmix på Emotion 98.3',
+  },
+
+  // Fordonsutmaningar
+  {
+    id: 'chk-v1',
+    categoryId: 'vehicle_challenges',
+    title: 'Stunt-hopp (25 av 50 för 100%)',
+    region: 'Hela Leonida',
+    requirement: 'Klara minst hälften av alla unika stunt-hopp med godkänd landning.',
+    reward: 'Trofé: Luftburen i Leonida',
+  },
+  {
+    id: 'chk-v2',
+    categoryId: 'vehicle_challenges',
+    title: 'Midnight Street Circuit',
+    region: 'Downtown & Vice Beach',
+    requirement: 'Vinn alla 5 olagliga nattlopp i Vice City.',
+    reward: 'Gratis turbouppgraderingar',
+  },
+  {
+    id: 'chk-v3',
+    categoryId: 'vehicle_challenges',
+    title: 'Offshore Powerboat Cup',
+    region: 'Vice Port till Keys',
+    requirement: 'Sätt guldmedaljtid i den långa kusttävlingen med racerbåt.',
+    reward: 'Exklusiv racingbåt i marinan',
+  },
+  {
+    id: 'chk-v4',
+    categoryId: 'vehicle_challenges',
+    title: 'Under broarna (15/15)',
+    region: 'Hela Leonida',
+    requirement: 'Flyg med flygplan eller helikopter under alla 15 markerade brospann.',
+    reward: 'Stuntpilot-titel',
+  },
+
+  // Slumpmässiga händelser
+  {
+    id: 'chk-r1',
+    categoryId: 'random_events',
+    title: 'Stoppa värdetransport (5/5)',
+    region: 'Motorvägarna',
+    requirement: 'Ingrip mot eller kapa fem bepansrade bankbilar i rörelse.',
+    reward: 'Snabba kontanter ($35 000+)',
+  },
+  {
+    id: 'chk-r2',
+    categoryId: 'random_events',
+    title: 'Rädda strandsatt smugglare',
+    region: 'Grassrivers / Keys',
+    requirement: 'Hjälp eller överlämna minst tre strandsatta NPC:er i vildmarken.',
+    reward: 'Ny kontakt i mobilen',
+  },
+  {
+    id: 'chk-r3',
+    categoryId: 'random_events',
+    title: 'Stoppa ficktjuvar i Vice Beach',
+    region: 'Vice Beach',
+    requirement: 'Ta tillbaka väskan och återlämna den till turisten 3 gånger.',
+    reward: 'Hederspoäng & dricks',
+  },
+  {
+    id: 'chk-r4',
+    categoryId: 'random_events',
+    title: 'Nattlig gatufight eller bilträff',
+    region: 'Port Gellhorn',
+    requirement: 'Delta i och avsluta en spontan bilträff utan att bli arresterad.',
+    reward: 'Rabatt på lackering',
+  },
+];

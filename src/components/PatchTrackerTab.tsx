@@ -1,0 +1,476 @@
+import { Eye, Plus, Search, ShieldCheck, X } from 'lucide-react';
+import { FormEvent, useMemo, useState } from 'react';
+import { ConsolePlatform, NewPatchInput, PatchNote, PatchPlatformFilter } from '../types';
+
+interface PatchTrackerTabProps {
+  patches: PatchNote[];
+  selectedConsole: ConsolePlatform;
+  onAddPatch: (input: NewPatchInput) => Promise<void>;
+}
+
+export function PatchTrackerTab({
+  patches,
+  selectedConsole,
+  onAddPatch,
+}: PatchTrackerTabProps) {
+  const [platformFilter, setPlatformFilter] = useState<PatchPlatformFilter>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Admin modal form state
+  const [version, setVersion] = useState('');
+  const [title, setTitle] = useState('');
+  const [releaseDate, setReleaseDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [includePs5, setIncludePs5] = useState(true);
+  const [includeXbox, setIncludeXbox] = useState(true);
+  const [fileSizePs5, setFileSizePs5] = useState('2.10 GB');
+  const [fileSizeXbox, setFileSizeXbox] = useState('2.35 GB');
+  const [summary, setSummary] = useState('');
+  const [officialNotesRaw, setOfficialNotesRaw] = useState('');
+  const [communityRaw, setCommunityRaw] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState('');
+
+  const filteredPatches = useMemo(() => {
+    return patches.filter((patch) => {
+      const matchesPlatform =
+        platformFilter === 'all' || patch.platforms.includes(platformFilter);
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return matchesPlatform;
+      const hay = [
+        patch.version,
+        patch.title,
+        patch.summary,
+        ...patch.officialNotes,
+        ...patch.communityDiscoveries,
+      ]
+        .join(' ')
+        .toLowerCase();
+      return matchesPlatform && hay.includes(q);
+    });
+  }, [patches, platformFilter, searchQuery]);
+
+  async function handleSubmitPatch(e: FormEvent) {
+    e.preventDefault();
+    setFormError('');
+
+    const platforms: ConsolePlatform[] = [];
+    if (includePs5) platforms.push('ps5');
+    if (includeXbox) platforms.push('xbox');
+
+    if (!version.trim() || !title.trim() || platforms.length === 0) {
+      setFormError('Ange versionsnummer, rubrik och minst en konsolplattform.');
+      return;
+    }
+
+    const officialNotes = officialNotesRaw
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const communityDiscoveries = communityRaw
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    setIsSubmitting(true);
+    try {
+      await onAddPatch({
+        version: version.trim(),
+        title: title.trim(),
+        releaseDate,
+        platforms,
+        fileSizePs5: includePs5 ? fileSizePs5.trim() || undefined : undefined,
+        fileSizeXbox: includeXbox ? fileSizeXbox.trim() || undefined : undefined,
+        summary: summary.trim() || 'Ny uppdatering inlagd via adminverktyget.',
+        officialNotes:
+          officialNotes.length > 0
+            ? officialNotes
+            : ['Allmänna stabilitets- och prestandaförbättringar.'],
+        communityDiscoveries,
+      });
+      setVersion('');
+      setTitle('');
+      setSummary('');
+      setOfficialNotesRaw('');
+      setCommunityRaw('');
+      setIsModalOpen(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <section aria-labelledby="patches-heading" className="space-y-6">
+      {/* Header Row */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-medium text-[#00F0FF] mb-1">
+            Aktiv konsol: {selectedConsole === 'ps5' ? 'PlayStation 5' : 'Xbox Series X|S'}
+          </p>
+          <h1
+            id="patches-heading"
+            className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-white text-balance"
+          >
+            Uppdateringar & Patch Notes
+          </h1>
+          <p className="text-sm text-slate-400 mt-1 max-w-2xl">
+            Spåra officiella uppdateringar från Rockstar Games och dolda prestandaförändringar som
+            communityt upptäckt för PS5 och Xbox Series X|S.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsModalOpen(true)}
+          className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#FF2A85] hover:bg-[#e52275] active:scale-[0.99] text-white text-sm font-semibold transition-all whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
+        >
+          <Plus size={18} />
+          <span>Lägg till patch</span>
+        </button>
+      </div>
+
+      {/* Filter & Search Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div
+          role="tablist"
+          aria-label="Filtrera uppdateringar per plattform"
+          className="inline-flex items-center p-1 rounded-xl bg-[#141720] border border-white/10 self-start"
+        >
+          {(
+            [
+              { id: 'all', label: 'Alla' },
+              { id: 'ps5', label: 'PS5' },
+              { id: 'xbox', label: 'Xbox Series X|S' },
+            ] as const
+          ).map((tab) => {
+            const active = platformFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setPlatformFilter(tab.id)}
+                className={`min-h-[38px] px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                  active
+                    ? 'bg-white/10 text-white'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="relative w-full md:w-72">
+          <Search
+            size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+          />
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Sök version eller ändring..."
+            aria-label="Sök bland uppdateringar"
+            className="w-full min-h-[44px] pl-10 pr-4 py-2 rounded-xl bg-[#141720] border border-white/10 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-[#00F0FF]"
+          />
+        </div>
+      </div>
+
+      {/* Timeline List */}
+      {filteredPatches.length === 0 ? (
+        <div className="leonida-surface rounded-2xl p-8 text-center">
+          <p className="text-base font-medium text-slate-200">
+            Inga uppdateringar matchade ditt filter.
+          </p>
+          <p className="text-sm text-slate-400 mt-1">
+            Prova att rensa sökfältet eller växla till Alla plattformar.
+          </p>
+        </div>
+      ) : (
+        <div className="relative space-y-5">
+          {filteredPatches.map((patch) => {
+            const platformText = patch.platforms
+              .map((p) => (p === 'ps5' ? 'PS5' : 'Xbox Series X|S'))
+              .join(' / ');
+
+            const sizeParts: string[] = [];
+            if (patch.fileSizePs5) sizeParts.push(`PS5: ${patch.fileSizePs5}`);
+            if (patch.fileSizeXbox) sizeParts.push(`Xbox: ${patch.fileSizeXbox}`);
+
+            return (
+              <article
+                key={patch.id}
+                className="leonida-glass rounded-2xl p-5 sm:p-6 transition-colors hover:border-white/15"
+              >
+                {/* Unboxed Metadata Row */}
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-400 mb-2">
+                  <span className="font-mono tabular-nums font-semibold text-[#00F0FF]">
+                    v{patch.version}
+                  </span>
+                  <span aria-hidden="true">·</span>
+                  <time dateTime={patch.releaseDate} className="font-mono tabular-nums">
+                    {patch.releaseDate}
+                  </time>
+                  <span aria-hidden="true">·</span>
+                  <span className="text-slate-300 font-medium">{platformText}</span>
+                  {sizeParts.length > 0 && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span className="font-mono tabular-nums text-slate-400">
+                        {sizeParts.join(' · ')}
+                      </span>
+                    </>
+                  )}
+                  {patch.isHotfix && (
+                    <>
+                      <span aria-hidden="true">·</span>
+                      <span className="text-[#FF2A85] font-medium">Hotfix</span>
+                    </>
+                  )}
+                </div>
+
+                <h2 className="font-display text-lg sm:text-xl font-bold text-white leading-snug">
+                  {patch.title}
+                </h2>
+                <p className="text-sm text-slate-300 mt-2 leading-relaxed max-w-3xl">
+                  {patch.summary}
+                </p>
+
+                {/* Two-column split on desktop for Official vs Community Discoveries */}
+                <div className="mt-5 pt-5 border-t border-white/[0.08] grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs font-semibold text-slate-200 mb-3">
+                      <ShieldCheck size={15} className="text-[#00F0FF] shrink-0" />
+                      <span>Officiella patch notes (Rockstar Games)</span>
+                    </div>
+                    <ul className="space-y-2 text-sm text-slate-300 leading-relaxed">
+                      {patch.officialNotes.map((note, idx) => (
+                        <li key={idx} className="flex items-start gap-2.5">
+                          <span
+                            aria-hidden="true"
+                            className="mt-2 w-1.5 h-1.5 rounded-full bg-slate-500 shrink-0"
+                          />
+                          <span>{note}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="pt-4 lg:pt-0 border-t lg:border-t-0 lg:border-l border-white/[0.08] lg:pl-6">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-[#FF2A85] mb-3">
+                      <Eye size={15} className="shrink-0" />
+                      <span>Community & Stealth-upptäckter</span>
+                    </div>
+                    {patch.communityDiscoveries.length === 0 ? (
+                      <p className="text-sm text-slate-500">
+                        Inga dolda ändringar rapporterade ännu för denna version.
+                      </p>
+                    ) : (
+                      <ul className="space-y-2 text-sm text-slate-300 leading-relaxed">
+                        {patch.communityDiscoveries.map((disc, idx) => (
+                          <li key={idx} className="flex items-start gap-2.5">
+                            <span
+                              aria-hidden="true"
+                              className="mt-2 w-1.5 h-1.5 rounded-full bg-[#FF2A85]/80 shrink-0"
+                            />
+                            <span>{disc}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Admin Modal for Adding New Patch Note */}
+      {isModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-patch-modal-title"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+        >
+          <div className="w-full sm:max-w-xl max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl bg-[#141720] border border-white/15 p-5 sm:p-6">
+            <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/10">
+              <div>
+                <h2
+                  id="add-patch-modal-title"
+                  className="font-display text-lg font-bold text-white"
+                >
+                  Lägg till ny patch note
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Sparas lokalt nu och är förberedd för Supabase-tabellen <span className="font-mono">patches</span>.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                aria-label="Stäng modal"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitPatch} className="mt-4 space-y-4">
+              {formError && (
+                <div className="p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-xs text-rose-200">
+                  {formError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                    Versionsnummer *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={version}
+                    onChange={(e) => setVersion(e.target.value)}
+                    placeholder="t.ex. 01.004.002"
+                    className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[#0D0F14] border border-white/10 text-sm font-mono text-white focus:outline-none focus:border-[#00F0FF]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                    Släppdatum
+                  </label>
+                  <input
+                    type="date"
+                    value={releaseDate}
+                    onChange={(e) => setReleaseDate(e.target.value)}
+                    className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[#0D0F14] border border-white/10 text-sm font-mono text-white focus:outline-none focus:border-[#00F0FF]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                  Rubrik *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="t.ex. Vice Port Nätverks- & Prestandapatch"
+                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[#0D0F14] border border-white/10 text-sm text-white focus:outline-none focus:border-[#00F0FF]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 rounded-xl bg-[#0D0F14] border border-white/10 space-y-2">
+                  <label className="flex items-center gap-2.5 text-sm font-medium text-slate-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includePs5}
+                      onChange={(e) => setIncludePs5(e.target.checked)}
+                      className="w-4 h-4 accent-[#00F0FF]"
+                    />
+                    <span>PlayStation 5</span>
+                  </label>
+                  {includePs5 && (
+                    <input
+                      type="text"
+                      value={fileSizePs5}
+                      onChange={(e) => setFileSizePs5(e.target.value)}
+                      placeholder="Filstorlek (t.ex. 2.10 GB)"
+                      className="w-full min-h-[38px] px-3 py-1.5 rounded-lg bg-[#141720] border border-white/10 text-xs font-mono text-slate-200 focus:outline-none focus:border-[#00F0FF]"
+                    />
+                  )}
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#0D0F14] border border-white/10 space-y-2">
+                  <label className="flex items-center gap-2.5 text-sm font-medium text-slate-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeXbox}
+                      onChange={(e) => setIncludeXbox(e.target.checked)}
+                      className="w-4 h-4 accent-[#FF2A85]"
+                    />
+                    <span>Xbox Series X|S</span>
+                  </label>
+                  {includeXbox && (
+                    <input
+                      type="text"
+                      value={fileSizeXbox}
+                      onChange={(e) => setFileSizeXbox(e.target.value)}
+                      placeholder="Filstorlek (t.ex. 2.35 GB)"
+                      className="w-full min-h-[38px] px-3 py-1.5 rounded-lg bg-[#141720] border border-white/10 text-xs font-mono text-slate-200 focus:outline-none focus:border-[#FF2A85]"
+                    />
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                  Sammanfattning
+                </label>
+                <input
+                  type="text"
+                  value={summary}
+                  onChange={(e) => setSummary(e.target.value)}
+                  placeholder="Kort överblick av vad patchen fokuserar på..."
+                  className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[#0D0F14] border border-white/10 text-sm text-white focus:outline-none focus:border-[#00F0FF]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                  Officiella patch notes (en punkt per rad)
+                </label>
+                <textarea
+                  rows={3}
+                  value={officialNotesRaw}
+                  onChange={(e) => setOfficialNotesRaw(e.target.value)}
+                  placeholder="Förbättrad bildfrekvens i Downtown Vice City&#10;Åtgärdat krasch vid byte av radio..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#0D0F14] border border-white/10 text-sm text-white focus:outline-none focus:border-[#00F0FF]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                  Community & Stealth-upptäckter (en punkt per rad)
+                </label>
+                <textarea
+                  rows={2}
+                  value={communityRaw}
+                  onChange={(e) => setCommunityRaw(e.target.value)}
+                  placeholder="Tyst ökning av vattenspray-effekter bakom racerbåtar..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#0D0F14] border border-white/10 text-sm text-white focus:outline-none focus:border-[#FF2A85]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="min-h-[44px] px-4 py-2 rounded-xl border border-white/10 text-sm font-medium text-slate-300 hover:bg-white/5 cursor-pointer"
+                >
+                  Avbryt
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="min-h-[44px] px-5 py-2 rounded-xl bg-[#FF2A85] hover:bg-[#e52275] disabled:opacity-60 text-sm font-semibold text-white cursor-pointer"
+                >
+                  {isSubmitting ? 'Sparar...' : 'Publicera patch note'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
