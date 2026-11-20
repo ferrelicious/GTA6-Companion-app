@@ -1,4 +1,4 @@
-name: Build & Release Signed Android APK
+name: Build & Release Android APK
 
 on:
   push:
@@ -39,91 +39,35 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      - name: Prepare Capacitor Android project
+      - name: Setup Capacitor Android
         run: |
           rm -f capacitor.config.ts capacitor.config.js capacitor.config.json
-          cat << 'EOF' > capacitor.config.json
-          {
-            "appId": "com.ferrelicious.gta6companion",
-            "appName": "GTA6 Companion",
-            "webDir": "dist"
-          }
-          EOF
+          node -e 'fs.writeFileSync("capacitor.config.json", JSON.stringify({ appId: "com.ferrelicious.gta6companion", appName: "GTA6 Companion", webDir: "dist" }, null, 2))'
           rm -rf android
           npx cap add android
           npx cap sync android
           chmod +x android/gradlew
 
-      - name: Fix Kotlin duplicate classes & bump version
+      - name: Fix Kotlin & set version
         run: |
-          cat << 'EOF' >> android/build.gradle
-
-          subprojects {
-              configurations.all {
-                  resolutionStrategy {
-                      force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
-                      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
-                      force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
-                  }
-              }
-          }
-          EOF
-
+          node -e '
+            const fs = require("fs");
+            const fix = "\nsubprojects { configurations.all { resolutionStrategy { force \"org.jetbrains.kotlin:kotlin-stdlib:1.8.22\", \"org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22\", \"org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22\" } } }\n";
+            fs.appendFileSync("android/build.gradle", fix);
+          '
           sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/g" android/app/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"1.0.${{ github.run_number }}\"/g" android/app/build.gradle
 
-      - name: Build Android Release APK
+      - name: Build Installable APK
         run: |
           cd android
-          ./gradlew assembleRelease
-
-      - name: Sign APK
-        id: sign_apk
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: |
-          UNSIGNED_APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
-          FINAL_APK="GTA6-Companion-v1.0.${{ github.run_number }}.apk"
-          BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 | sort -V | tail -n 1)
-
-          "$BUILD_TOOLS/zipalign" -v -p 4 "$UNSIGNED_APK" aligned.apk
-
-          if [ -n "$KEYSTORE_BASE64" ]; then
-            echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
-            "$BUILD_TOOLS/apksigner" sign \
-              --ks release.keystore \
-              --ks-pass "pass:$KEYSTORE_PASSWORD" \
-              --ks-key-alias "$KEY_ALIAS" \
-              --key-pass "pass:$KEY_PASSWORD" \
-              --out "$FINAL_APK" \
-              aligned.apk
-            rm -f release.keystore
-          else
-            keytool -genkeypair -v -keystore temp.keystore -alias tempkey \
-              -keyalg RSA -keysize 2048 -validity 10000 \
-              -storepass android -keypass android \
-              -dname "CN=GTA6Companion, OU=Dev, O=Ferrelicious, L=Uppsala, C=SE"
-            "$BUILD_TOOLS/apksigner" sign \
-              --ks temp.keystore \
-              --ks-pass "pass:android" \
-              --ks-key-alias "tempkey" \
-              --key-pass "pass:android" \
-              --out "$FINAL_APK" \
-              aligned.apk
-            rm -f temp.keystore
-          fi
-
-          rm -f aligned.apk
-          echo "apk_name=$FINAL_APK" >> $GITHUB_OUTPUT
+          ./gradlew assembleDebug
+          cp app/build/outputs/apk/debug/app-debug.apk ../GTA6-Companion-v1.0.${{ github.run_number }}.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: GTA 6 Companion v1.0.${{ github.run_number }}
-          body: |
-            Automatiskt byggd och signerad release från commit `${{ github.sha }}`.
-          files: ${{ steps.sign_apk.outputs.apk_name }}
+          body: Automatiskt byggd APK från commit `${{ github.sha }}`.
+          files: GTA6-Companion-v1.0.${{ github.run_number }}.apk
