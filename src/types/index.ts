@@ -124,3 +124,23 @@ export interface PlatformServerStatus {
   }[];
   updatedAt: string;
 }
+
+export interface NewswireArticle {
+  id: string;
+  title: string;
+  publishedAt: string;
+  summary: string;
+  link: string;
+  category: string;
+  isFallback?: boolean;
+}
+
+export type PushPlatformChoice = 'ps5' | 'xbox' | 'both';
+
+export interface PushSubscriptionState {
+  enabled: boolean;
+  platform: PushPlatformChoice;
+  endpoint?: string;
+  updatedAt?: string;
+}
+

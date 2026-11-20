@@ -1,6 +1,32 @@
-import { Eye, Plus, Search, ShieldCheck, X } from 'lucide-react';
-import { FormEvent, useMemo, useState } from 'react';
-import { ConsolePlatform, NewPatchInput, PatchNote, PatchPlatformFilter } from '../types';
+import {
+  Bell,
+  BellOff,
+  CheckCircle2,
+  ExternalLink,
+  Eye,
+  Newspaper,
+  Plus,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  X,
+} from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { api } from '../services/api';
+import {
+  subscribeToPatchNotifications,
+  triggerTestPatchNotification,
+} from '../services/pushService';
+import { fetchRockstarNewswire, RssFetchResult } from '../services/rssService';
+import {
+  ConsolePlatform,
+  NewPatchInput,
+  NewswireArticle,
+  PatchNote,
+  PatchPlatformFilter,
+  PushPlatformChoice,
+  PushSubscriptionState,
+} from '../types';
 
 interface PatchTrackerTabProps {
   patches: PatchNote[];
@@ -30,6 +56,81 @@ export function PatchTrackerTab({
   const [communityRaw, setCommunityRaw] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+
+  // Rockstar Newswire RSS state
+  const [newswireArticles, setNewswireArticles] = useState<NewswireArticle[]>([]);
+  const [rssSource, setRssSource] = useState<RssFetchResult['source']>('fallback');
+  const [isLoadingRss, setIsLoadingRss] = useState(true);
+
+  // Web Push notification state
+  const [isPushModalOpen, setIsPushModalOpen] = useState(false);
+  const [pushState, setPushState] = useState<PushSubscriptionState>({
+    enabled: false,
+    platform: 'both',
+  });
+  const [selectedPushPlatform, setSelectedPushPlatform] = useState<PushPlatformChoice>('both');
+  const [isPushBusy, setIsPushBusy] = useState(false);
+  const [pushFeedback, setPushFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(
+    null
+  );
+
+  async function loadNewswire() {
+    setIsLoadingRss(true);
+    try {
+      const result = await fetchRockstarNewswire();
+      setNewswireArticles(result.articles);
+      setRssSource(result.source);
+    } finally {
+      setIsLoadingRss(false);
+    }
+  }
+
+  useEffect(() => {
+    loadNewswire();
+    api.getPushSubscriptionState().then((saved) => {
+      setPushState(saved);
+      setSelectedPushPlatform(saved.platform);
+    });
+  }, []);
+
+  async function handleEnablePush() {
+    setIsPushBusy(true);
+    setPushFeedback(null);
+    try {
+      const result = await subscribeToPatchNotifications(selectedPushPlatform);
+      setPushState(result.state);
+      setPushFeedback({ type: 'success', text: result.message });
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Kunde inte aktivera pushnotiser.';
+      setPushFeedback({ type: 'error', text: message });
+    } finally {
+      setIsPushBusy(false);
+    }
+  }
+
+  async function handleDisablePush() {
+    setIsPushBusy(true);
+    setPushFeedback(null);
+    try {
+      const next = await api.disablePushSubscription();
+      setPushState(next);
+      setPushFeedback({ type: 'success', text: 'Pushbevakning pausad för denna enhet.' });
+    } finally {
+      setIsPushBusy(false);
+    }
+  }
+
+  async function handleTestPush() {
+    setPushFeedback(null);
+    try {
+      await triggerTestPatchNotification(selectedPushPlatform);
+      setPushFeedback({ type: 'success', text: 'Testnotis skickad till din enhet.' });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Kunde inte skicka testnotis.';
+      setPushFeedback({ type: 'error', text: message });
+    }
+  }
 
   const filteredPatches = useMemo(() => {
     return patches.filter((patch) => {
@@ -119,14 +220,103 @@ export function PatchTrackerTab({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#FF2A85] hover:bg-[#e52275] active:scale-[0.99] text-white text-sm font-semibold transition-all whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
-        >
-          <Plus size={18} />
-          <span>Lägg till patch</span>
-        </button>
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              setPushFeedback(null);
+              setIsPushModalOpen(true);
+            }}
+            className={`inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl text-sm font-semibold border transition-all whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF] ${
+              pushState.enabled
+                ? 'bg-[#00F0FF]/15 border-[#00F0FF]/40 text-[#00F0FF] hover:bg-[#00F0FF]/25'
+                : 'bg-[#141720] border-white/15 text-slate-100 hover:border-[#00F0FF]/50'
+            }`}
+          >
+            <Bell size={17} />
+            <span>
+              {pushState.enabled ? 'Push aktivt' : 'Bevaka uppdateringar (Push)'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#FF2A85] hover:bg-[#e52275] active:scale-[0.99] text-white text-sm font-semibold transition-all whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
+          >
+            <Plus size={18} />
+            <span>Lägg till patch</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Rockstar Newswire & Nyheter (RSS) */}
+      <div className="leonida-glass rounded-2xl p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/[0.08]">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Newspaper size={18} className="text-[#FF2A85] shrink-0" />
+            <div className="min-w-0">
+              <h2 className="font-display text-base sm:text-lg font-bold text-white truncate">
+                Rockstar Newswire & Nyheter
+              </h2>
+              <p className="text-xs text-slate-400">
+                Filtrerat RSS-flöde för Grand Theft Auto VI och Title Updates
+                {rssSource === 'fallback' && ' · Förhandsvisningsdata (RSS blockerad i sandbox)'}
+                {rssSource === 'cors-proxy' && ' · Live via RSS-proxy'}
+                {rssSource === 'edge-function' && ' · Live via Supabase Edge Function'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={loadNewswire}
+            disabled={isLoadingRss}
+            className="inline-flex items-center gap-1.5 min-h-[40px] px-3 py-1.5 rounded-xl bg-[#0D0F14] border border-white/10 text-xs font-medium text-slate-300 hover:text-white hover:border-white/25 disabled:opacity-60 cursor-pointer shrink-0"
+          >
+            <RefreshCw size={14} className={isLoadingRss ? 'animate-spin' : ''} />
+            <span>{isLoadingRss ? 'Hämtar...' : 'Uppdatera RSS'}</span>
+          </button>
+        </div>
+
+        {isLoadingRss && newswireArticles.length === 0 ? (
+          <div className="py-6 text-sm text-slate-400">Hämtar senaste artiklarna från Rockstar...</div>
+        ) : (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {newswireArticles.slice(0, 3).map((article) => (
+              <article
+                key={article.id}
+                className="flex flex-col justify-between p-4 rounded-xl bg-[#0D0F14]/75 border border-white/[0.07] hover:border-white/15 transition-colors"
+              >
+                <div>
+                  <div className="flex items-center gap-2 text-xs text-slate-400 mb-1.5">
+                    <span className="text-[#00F0FF] font-medium">{article.category}</span>
+                    <span aria-hidden="true">·</span>
+                    <time dateTime={article.publishedAt} className="font-mono tabular-nums">
+                      {article.publishedAt}
+                    </time>
+                  </div>
+                  <h3 className="font-display text-sm font-bold text-white leading-snug line-clamp-2">
+                    {article.title}
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-2 leading-relaxed line-clamp-3">
+                    {article.summary}
+                  </p>
+                </div>
+
+                <a
+                  href={article.link}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF2A85] hover:text-[#ff5ca1] transition-colors"
+                >
+                  <span>Läs på Rockstar Newswire</span>
+                  <ExternalLink size={13} />
+                </a>
+              </article>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Filter & Search Toolbar */}
@@ -468,6 +658,137 @@ export function PatchTrackerTab({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal för Pushnotis-bevakning */}
+      {isPushModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="push-modal-title"
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm p-0 sm:p-4"
+        >
+          <div className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-[#141720] border border-white/15 p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between gap-4 pb-3 border-b border-white/10">
+              <div>
+                <h2 id="push-modal-title" className="font-display text-lg font-bold text-white">
+                  Bevaka uppdateringar (Push)
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Få en notis direkt när en ny GTA VI-patch läggs in i Supabase.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPushModalOpen(false)}
+                aria-label="Stäng notisinställningar"
+                className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-white/5 cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-slate-300">
+                Välj plattform att bevaka:
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    { id: 'ps5', label: 'PS5' },
+                    { id: 'xbox', label: 'Xbox' },
+                    { id: 'both', label: 'Båda' },
+                  ] as const
+                ).map((opt) => {
+                  const active = selectedPushPlatform === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setSelectedPushPlatform(opt.id)}
+                      className={`min-h-[44px] px-3 py-2 rounded-xl text-xs font-semibold border transition-colors cursor-pointer ${
+                        active
+                          ? 'bg-[#00F0FF]/15 border-[#00F0FF] text-[#00F0FF]'
+                          : 'bg-[#0D0F14] border-white/10 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-[#0D0F14] border border-white/[0.08] text-xs text-slate-400 space-y-1">
+              <div className="flex items-center justify-between">
+                <span>Enhets-ID (anonym synk):</span>
+                <span className="font-mono text-slate-300">
+                  {api.getDeviceId().slice(0, 8)}...
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Molnsynk (Supabase):</span>
+                <span className={api.isCloudSyncEnabled() ? 'text-emerald-400' : 'text-amber-400'}>
+                  {api.isCloudSyncEnabled() ? 'Ansluten' : 'Offline-läge (localStorage)'}
+                </span>
+              </div>
+            </div>
+
+            {pushFeedback && (
+              <div
+                className={`p-3 rounded-xl border text-xs flex items-start gap-2 ${
+                  pushFeedback.type === 'success'
+                    ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-200'
+                    : 'bg-rose-500/15 border-rose-500/35 text-rose-200'
+                }`}
+              >
+                {pushFeedback.type === 'success' && (
+                  <CheckCircle2 size={15} className="shrink-0 mt-0.5" />
+                )}
+                <span>{pushFeedback.text}</span>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2 pt-1">
+              <button
+                type="button"
+                disabled={isPushBusy}
+                onClick={handleEnablePush}
+                className="w-full min-h-[46px] px-4 py-2.5 rounded-xl bg-[#FF2A85] hover:bg-[#e52275] disabled:opacity-60 text-sm font-semibold text-white flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Bell size={16} />
+                <span>
+                  {isPushBusy
+                    ? 'Aktiverar...'
+                    : pushState.enabled
+                      ? 'Uppdatera plattformsval'
+                      : 'Aktivera pushnotiser'}
+                </span>
+              </button>
+
+              {pushState.enabled && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={handleTestPush}
+                    className="min-h-[42px] px-3 py-2 rounded-xl bg-[#0D0F14] border border-white/15 text-xs font-medium text-slate-200 hover:bg-white/5 cursor-pointer"
+                  >
+                    Testa notis
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isPushBusy}
+                    onClick={handleDisablePush}
+                    className="min-h-[42px] px-3 py-2 rounded-xl bg-[#0D0F14] border border-white/10 text-xs font-medium text-slate-400 hover:text-rose-300 flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <BellOff size={14} />
+                    <span>Stäng av</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
