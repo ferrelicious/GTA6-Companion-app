@@ -12,6 +12,7 @@ import {
   MarkerCategory,
   NewPatchInput,
   PatchNote,
+  PatchPlatformFilter,
   PlatformServerStatus,
   PushPlatformChoice,
   PushSubscriptionState,
@@ -20,6 +21,8 @@ import {
 
 const STORAGE_KEYS = {
   CONSOLE: 'leonida_selected_console_v1',
+  DEFAULT_PLATFORM_FILTER: 'leonida_default_platform_filter_v1',
+  HIDE_FOUND_MARKERS: 'leonida_hide_found_markers_v1',
   PATCHES: 'leonida_patches_v1',
   FOUND_MARKERS: 'leonida_found_markers_v1',
   CUSTOM_MARKERS: 'leonida_custom_markers_v1',
@@ -120,6 +123,11 @@ export interface CompanionApi {
   isCloudSyncEnabled(): boolean;
   getSelectedConsole(): ConsolePlatform;
   setSelectedConsole(platform: ConsolePlatform): void;
+  getDefaultPlatformFilter(): PatchPlatformFilter;
+  setDefaultPlatformFilter(filter: PatchPlatformFilter): void;
+  getHideFoundMarkers(): boolean;
+  setHideFoundMarkers(hide: boolean): void;
+  resetLocalCache(): void;
 
   // Patch Notes
   getPatches(): Promise<PatchNote[]>;
@@ -169,6 +177,42 @@ class SupabaseCompanionService implements CompanionApi {
 
   setSelectedConsole(platform: ConsolePlatform): void {
     writeJson(STORAGE_KEYS.CONSOLE, platform);
+  }
+
+  getDefaultPlatformFilter(): PatchPlatformFilter {
+    const saved = readJson<PatchPlatformFilter>(STORAGE_KEYS.DEFAULT_PLATFORM_FILTER, 'all');
+    return saved === 'ps5' || saved === 'xbox' ? saved : 'all';
+  }
+
+  setDefaultPlatformFilter(filter: PatchPlatformFilter): void {
+    writeJson(STORAGE_KEYS.DEFAULT_PLATFORM_FILTER, filter);
+  }
+
+  getHideFoundMarkers(): boolean {
+    return readJson<boolean>(STORAGE_KEYS.HIDE_FOUND_MARKERS, false);
+  }
+
+  setHideFoundMarkers(hide: boolean): void {
+    writeJson(STORAGE_KEYS.HIDE_FOUND_MARKERS, hide);
+  }
+
+  resetLocalCache(): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const keysToClear = [
+        STORAGE_KEYS.PATCHES,
+        STORAGE_KEYS.FOUND_MARKERS,
+        STORAGE_KEYS.CUSTOM_MARKERS,
+        STORAGE_KEYS.COMPLETED_CHECKLIST,
+        STORAGE_KEYS.HIDE_FOUND_MARKERS,
+        STORAGE_KEYS.DEFAULT_PLATFORM_FILTER,
+      ];
+      for (const key of keysToClear) {
+        window.localStorage.removeItem(key);
+      }
+    } catch {
+      // Ignorera lagringsfel
+    }
   }
 
   // ---------------- PATCH NOTES ----------------

@@ -33,6 +33,8 @@ import { LeonidaSvgMap } from './LeonidaSvgMap';
 interface LeonidaMapTabProps {
   markers: MapMarker[];
   foundMarkerIds: string[];
+  hideFound: boolean;
+  onToggleHideFound: (next: boolean) => void;
   onToggleFound: (markerId: string) => void;
   onAddCustomMarker: (marker: Omit<MapMarker, 'id' | 'isCustom'>) => Promise<MapMarker>;
   onDeleteCustomMarker: (markerId: string) => Promise<void>;
@@ -74,6 +76,8 @@ const DISTRICT_PRESETS: { label: string; xPct: number; yPct: number; zoom: numbe
 export function LeonidaMapTab({
   markers,
   foundMarkerIds,
+  hideFound,
+  onToggleHideFound,
   onToggleFound,
   onAddCustomMarker,
   onDeleteCustomMarker,
@@ -83,7 +87,6 @@ export function LeonidaMapTab({
   const [activeCategories, setActiveCategories] = useState<Set<MarkerCategory>>(
     () => new Set(ALL_CATEGORIES.map((c) => c.id))
   );
-  const [hideFound, setHideFound] = useState(false);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(() => new Set());
 
@@ -433,7 +436,7 @@ export function LeonidaMapTab({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => setHideFound((v) => !v)}
+            onClick={() => onToggleHideFound(!hideFound)}
             aria-pressed={hideFound}
             className={`inline-flex items-center gap-1.5 min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
               hideFound

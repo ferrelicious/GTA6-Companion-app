@@ -1,6 +1,6 @@
 export type ConsolePlatform = 'ps5' | 'xbox';
 
-export type MainTab = 'patches' | 'map' | 'checklist' | 'guides';
+export type MainTab = 'patches' | 'map' | 'checklist' | 'guides' | 'settings';
 
 export type PatchPlatformFilter = 'all' | 'ps5' | 'xbox';
 

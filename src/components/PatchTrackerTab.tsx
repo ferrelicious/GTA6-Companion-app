@@ -32,19 +32,25 @@ import {
 interface PatchTrackerTabProps {
   patches: PatchNote[];
   selectedConsole: ConsolePlatform;
+  defaultPlatformFilter: PatchPlatformFilter;
   onAddPatch: (input: NewPatchInput) => Promise<void>;
 }
 
 export function PatchTrackerTab({
   patches,
   selectedConsole,
+  defaultPlatformFilter,
   onAddPatch,
 }: PatchTrackerTabProps) {
   const { t, localizePatch, localizeNewswireArticle } = useTranslation();
 
-  const [platformFilter, setPlatformFilter] = useState<PatchPlatformFilter>('all');
+  const [platformFilter, setPlatformFilter] = useState<PatchPlatformFilter>(defaultPlatformFilter);
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    setPlatformFilter(defaultPlatformFilter);
+  }, [defaultPlatformFilter]);
 
   // Admin modal form state
   const [version, setVersion] = useState('');

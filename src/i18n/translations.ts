@@ -71,6 +71,7 @@ export interface TranslationDictionary {
     map: string;
     checklist: string;
     guides: string;
+    settings: string;
   };
   patches: {
     activeConsoleLabel: string;
@@ -200,6 +201,53 @@ export interface TranslationDictionary {
     psButtons: { triangle: string; circle: string; cross: string; square: string };
   };
   cheatCategories: Record<'Alla' | CheatCategory, string>;
+  settings: {
+    kicker: string;
+    title: string;
+    subtitle: string;
+    preferencesHeading: string;
+    defaultPlatformLabel: string;
+    defaultPlatformHint: string;
+    languageLabel: string;
+    languageHint: string;
+    hideFoundLabel: string;
+    hideFoundHint: string;
+    pushHeading: string;
+    pushHint: string;
+    pushStatusActive: string;
+    pushStatusInactive: string;
+    updatesHeading: string;
+    updatesHint: string;
+    currentVersionLabel: string;
+    repoLabel: string;
+    repoNotConfiguredHint: string;
+    lastCheckedLabel: string;
+    checkUpdatesBtn: string;
+    checkingUpdatesBtn: string;
+    upToDateMsg: string;
+    repoNotFoundError: string;
+    rateLimitError: string;
+    checkFailedError: string;
+    cacheHeading: string;
+    cacheHint: string;
+    deviceIdLabel: string;
+    cloudSyncLabel: string;
+    resetCacheBtn: string;
+    confirmResetCacheBtn: string;
+    cacheClearedMsg: string;
+  };
+  updateModal: {
+    kicker: string;
+    title: string;
+    currentVersion: string;
+    latestVersion: string;
+    releaseDate: string;
+    notesHeading: string;
+    noNotesFallback: string;
+    downloadApkBtn: string;
+    openReleaseBtn: string;
+    laterBtn: string;
+  };
 }
 
 const TRANSLATIONS: Record<Language, TranslationDictionary> = {
@@ -230,6 +278,7 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       map: 'Map',
       checklist: 'Checklist',
       guides: 'Guides & Cheats',
+      settings: 'Settings',
     },
     patches: {
       activeConsoleLabel: 'Active console',
@@ -379,6 +428,56 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       Fordon: 'Vehicles',
       Värld: 'World',
     },
+    settings: {
+      kicker: 'App Configuration & Release Sync',
+      title: 'Settings',
+      subtitle:
+        'Customize your default platform, language, map filters, push notifications, local cache, and check for APK updates.',
+      preferencesHeading: 'General & Map Preferences',
+      defaultPlatformLabel: 'Default platform',
+      defaultPlatformHint: 'Pre-selected platform filter for updates and console layout.',
+      languageLabel: 'Interface language',
+      languageHint: 'Applies immediately across menus, guides, map markers, and checklists.',
+      hideFoundLabel: 'Hide found markers on map',
+      hideFoundHint: 'Only show uncollected items and secrets on the Leonida map.',
+      pushHeading: 'Push Notifications',
+      pushHint: 'Receive alerts whenever a new GTA VI update is published for PS5 or Xbox.',
+      pushStatusActive: 'Active',
+      pushStatusInactive: 'Off',
+      updatesHeading: 'App Updates (GitHub Releases)',
+      updatesHint: 'Checks the latest signed Android APK release directly via GitHub API.',
+      currentVersionLabel: 'Installed version',
+      repoLabel: 'GitHub repository',
+      repoNotConfiguredHint:
+        'Set VITE_GITHUB_REPO in .env or edit DEFAULT_GITHUB_REPO in updateService.ts.',
+      lastCheckedLabel: 'Last checked',
+      checkUpdatesBtn: 'Check for updates',
+      checkingUpdatesBtn: 'Checking GitHub...',
+      upToDateMsg: 'You are already running the latest version.',
+      repoNotFoundError:
+        'No release found (404). Make sure your GitHub repository is public and has a published v* release.',
+      rateLimitError: 'GitHub API rate limit reached. Try again in a few minutes.',
+      checkFailedError: 'Could not reach GitHub Releases API.',
+      cacheHeading: 'Local Cache & Cloud Sync',
+      cacheHint: 'Clears locally cached patches, progress, and filters without deleting your device ID.',
+      deviceIdLabel: 'Device ID',
+      cloudSyncLabel: 'Supabase Cloud',
+      resetCacheBtn: 'Reset local cache',
+      confirmResetCacheBtn: 'Confirm clear cache',
+      cacheClearedMsg: 'Local cache cleared and defaults restored.',
+    },
+    updateModal: {
+      kicker: 'New Release Available',
+      title: 'Update Found for Leonida Companion',
+      currentVersion: 'Current version',
+      latestVersion: 'Latest release',
+      releaseDate: 'Published',
+      notesHeading: 'Release Notes',
+      noNotesFallback: 'Signed Android APK release built automatically via GitHub Actions.',
+      downloadApkBtn: 'Download Signed APK',
+      openReleaseBtn: 'View Release on GitHub',
+      laterBtn: 'Later',
+    },
   },
   sv: {
     common: {
@@ -407,6 +506,7 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       map: 'Karta',
       checklist: 'Checklista',
       guides: 'Guider & Fusk',
+      settings: 'Inställningar',
     },
     patches: {
       activeConsoleLabel: 'Aktiv konsol',
@@ -556,6 +656,56 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       Fordon: 'Fordon',
       Värld: 'Värld',
     },
+    settings: {
+      kicker: 'Appkonfiguration & Release-synk',
+      title: 'Inställningar',
+      subtitle:
+        'Anpassa standardplattform, språk, kartfilter, pushnotiser, lokal cache och sök efter nya APK-uppdateringar.',
+      preferencesHeading: 'Allmänt & Kartinställningar',
+      defaultPlatformLabel: 'Standardplattform',
+      defaultPlatformHint: 'Förvalt plattformsfilter för uppdateringar och konsolvyn.',
+      languageLabel: 'Språk i gränssnittet',
+      languageHint: 'Uppdaterar menyer, guider, kartmarkörer och checklista direkt.',
+      hideFoundLabel: 'Dölj hittade markörer på kartan',
+      hideFoundHint: 'Visa endast ohittade samlarobjekt och hemligheter på Leonida-kartan.',
+      pushHeading: 'Pushnotiser',
+      pushHint: 'Få notis så fort en ny GTA VI-patch publiceras för PS5 eller Xbox.',
+      pushStatusActive: 'Aktiv',
+      pushStatusInactive: 'Avstängd',
+      updatesHeading: 'Appuppdateringar (GitHub Releases)',
+      updatesHint: 'Kontrollerar senaste signerade Android-APK direkt mot GitHub API.',
+      currentVersionLabel: 'Installerad version',
+      repoLabel: 'GitHub-repository',
+      repoNotConfiguredHint:
+        'Ange VITE_GITHUB_REPO i .env eller uppdatera DEFAULT_GITHUB_REPO i updateService.ts.',
+      lastCheckedLabel: 'Senast kontrollerad',
+      checkUpdatesBtn: 'Sök efter uppdateringar',
+      checkingUpdatesBtn: 'Söker på GitHub...',
+      upToDateMsg: 'Du har redan den senaste versionen installerad.',
+      repoNotFoundError:
+        'Hittade ingen release (404). Kontrollera att ditt GitHub-repo är publikt och har en publicerad v*-release.',
+      rateLimitError: 'GitHub API-gräns nådd. Försök igen om några minuter.',
+      checkFailedError: 'Kunde inte nå GitHub Releases API.',
+      cacheHeading: 'Lokal cache & Molnsynk',
+      cacheHint: 'Rensar lokalt cachade patchar, framsteg och filter utan att ta bort ditt enhets-ID.',
+      deviceIdLabel: 'Enhets-ID',
+      cloudSyncLabel: 'Supabase-moln',
+      resetCacheBtn: 'Återställ lokal cache',
+      confirmResetCacheBtn: 'Bekräfta rensning',
+      cacheClearedMsg: 'Lokal cache rensad och standardvärden återställda.',
+    },
+    updateModal: {
+      kicker: 'Ny version tillgänglig',
+      title: 'Uppdatering hittad för Leonida Companion',
+      currentVersion: 'Nuvarande version',
+      latestVersion: 'Senaste release',
+      releaseDate: 'Publicerad',
+      notesHeading: 'Ändringar i releasen',
+      noNotesFallback: 'Signerad Android-APK byggd automatiskt via GitHub Actions.',
+      downloadApkBtn: 'Ladda ner signerad APK',
+      openReleaseBtn: 'Visa release på GitHub',
+      laterBtn: 'Senare',
+    },
   },
   es: {
     common: {
@@ -584,6 +734,7 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       map: 'Mapa',
       checklist: 'Progreso',
       guides: 'Guías y Trucos',
+      settings: 'Ajustes',
     },
     patches: {
       activeConsoleLabel: 'Consola activa',
@@ -733,6 +884,56 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       Fordon: 'Vehículos',
       Värld: 'Mundo',
     },
+    settings: {
+      kicker: 'Configuración y Versiones',
+      title: 'Ajustes',
+      subtitle:
+        'Configura tu plataforma predeterminada, idioma, filtros del mapa, notificaciones push, caché local y busca actualizaciones APK.',
+      preferencesHeading: 'Preferencias generales y del mapa',
+      defaultPlatformLabel: 'Plataforma predeterminada',
+      defaultPlatformHint: 'Filtro inicial para actualizaciones y diseño de consola.',
+      languageLabel: 'Idioma de la interfaz',
+      languageHint: 'Se aplica al instante en menús, guías, mapa y listas.',
+      hideFoundLabel: 'Ocultar marcadores encontrados',
+      hideFoundHint: 'Muestra solo los secretos y objetos pendientes en el mapa de Leonida.',
+      pushHeading: 'Notificaciones Push',
+      pushHint: 'Recibe alertas cuando se publique un nuevo parche de GTA VI para PS5 o Xbox.',
+      pushStatusActive: 'Activo',
+      pushStatusInactive: 'Desactivado',
+      updatesHeading: 'Actualizaciones (GitHub Releases)',
+      updatesHint: 'Comprueba la última APK firmada mediante la API de GitHub.',
+      currentVersionLabel: 'Versión instalada',
+      repoLabel: 'Repositorio GitHub',
+      repoNotConfiguredHint:
+        'Configura VITE_GITHUB_REPO en .env o edita DEFAULT_GITHUB_REPO en updateService.ts.',
+      lastCheckedLabel: 'Última comprobación',
+      checkUpdatesBtn: 'Buscar actualizaciones',
+      checkingUpdatesBtn: 'Comprobando GitHub...',
+      upToDateMsg: 'Ya tienes instalada la última versión.',
+      repoNotFoundError:
+        'No se encontró ninguna release (404). Asegúrate de que el repositorio es público y tiene una release v*.',
+      rateLimitError: 'Límite de la API de GitHub alcanzado. Inténtalo más tarde.',
+      checkFailedError: 'No se pudo conectar con GitHub Releases API.',
+      cacheHeading: 'Caché local y Nube',
+      cacheHint: 'Borra parches, progreso y filtros cacheados sin eliminar tu ID de dispositivo.',
+      deviceIdLabel: 'ID de dispositivo',
+      cloudSyncLabel: 'Nube Supabase',
+      resetCacheBtn: 'Restablecer caché local',
+      confirmResetCacheBtn: 'Confirmar limpieza',
+      cacheClearedMsg: 'Caché local borrada y valores restaurados.',
+    },
+    updateModal: {
+      kicker: 'Nueva versión disponible',
+      title: 'Actualización disponible para Leonida Companion',
+      currentVersion: 'Versión actual',
+      latestVersion: 'Última versión',
+      releaseDate: 'Publicado',
+      notesHeading: 'Notas de la versión',
+      noNotesFallback: 'APK de Android firmada compilada automáticamente con GitHub Actions.',
+      downloadApkBtn: 'Descargar APK firmada',
+      openReleaseBtn: 'Ver release en GitHub',
+      laterBtn: 'Más tarde',
+    },
   },
   de: {
     common: {
@@ -761,6 +962,7 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       map: 'Karte',
       checklist: 'Checkliste',
       guides: 'Guides & Cheats',
+      settings: 'Einstellungen',
     },
     patches: {
       activeConsoleLabel: 'Aktive Konsole',
@@ -910,6 +1112,56 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       Fordon: 'Fahrzeuge',
       Värld: 'Welt',
     },
+    settings: {
+      kicker: 'App-Konfiguration & Releases',
+      title: 'Einstellungen',
+      subtitle:
+        'Passe Standardplattform, Sprache, Kartenfilter, Push-Mitteilungen, lokalen Cache und APK-Updates an.',
+      preferencesHeading: 'Allgemein & Kartenoptionen',
+      defaultPlatformLabel: 'Standardplattform',
+      defaultPlatformHint: 'Voreingestellter Plattformfilter für Updates und Konsolensymbole.',
+      languageLabel: 'App-Sprache',
+      languageHint: 'Gilt sofort für Menüs, Guides, Kartenmarker und Checklisten.',
+      hideFoundLabel: 'Gefundene Marker ausblenden',
+      hideFoundHint: 'Zeigt auf der Leonida-Karte nur noch unentdeckte Orte und Geheimnisse.',
+      pushHeading: 'Push-Benachrichtigungen',
+      pushHint: 'Erhalte Meldungen, sobald ein neuer GTA-VI-Patch für PS5 oder Xbox erscheint.',
+      pushStatusActive: 'Aktiv',
+      pushStatusInactive: 'Aus',
+      updatesHeading: 'App-Updates (GitHub Releases)',
+      updatesHint: 'Prüft über die GitHub-API auf die neueste signierte Android-APK.',
+      currentVersionLabel: 'Installierte Version',
+      repoLabel: 'GitHub-Repository',
+      repoNotConfiguredHint:
+        'Lege VITE_GITHUB_REPO in .env fest oder passe DEFAULT_GITHUB_REPO in updateService.ts an.',
+      lastCheckedLabel: 'Zuletzt geprüft',
+      checkUpdatesBtn: 'Nach Updates suchen',
+      checkingUpdatesBtn: 'GitHub wird geprüft...',
+      upToDateMsg: 'Du nutzt bereits die aktuellste Version.',
+      repoNotFoundError:
+        'Kein Release gefunden (404). Stelle sicher, dass das Repo öffentlich ist und ein v*-Release enthält.',
+      rateLimitError: 'GitHub-API-Limit erreicht. Bitte später erneut versuchen.',
+      checkFailedError: 'GitHub Releases API konnte nicht erreicht werden.',
+      cacheHeading: 'Lokaler Cache & Cloud-Sync',
+      cacheHint: 'Löscht lokal gespeicherte Patches, Fortschritte und Filter (Geräte-ID bleibt erhalten).',
+      deviceIdLabel: 'Geräte-ID',
+      cloudSyncLabel: 'Supabase Cloud',
+      resetCacheBtn: 'Lokalen Cache zurücksetzen',
+      confirmResetCacheBtn: 'Löschen bestätigen',
+      cacheClearedMsg: 'Lokaler Cache gelöscht und Standardwerte wiederhergestellt.',
+    },
+    updateModal: {
+      kicker: 'Neue Version verfügbar',
+      title: 'Update für Leonida Companion gefunden',
+      currentVersion: 'Aktuelle Version',
+      latestVersion: 'Neuestes Release',
+      releaseDate: 'Veröffentlicht',
+      notesHeading: 'Release Notes',
+      noNotesFallback: 'Signierte Android-APK automatisch erstellt über GitHub Actions.',
+      downloadApkBtn: 'Signierte APK herunterladen',
+      openReleaseBtn: 'Release auf GitHub ansehen',
+      laterBtn: 'Später',
+    },
   },
   fr: {
     common: {
@@ -938,6 +1190,7 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       map: 'Carte',
       checklist: 'Progression',
       guides: 'Guides & Codes',
+      settings: 'Paramètres',
     },
     patches: {
       activeConsoleLabel: 'Console active',
@@ -1087,6 +1340,56 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       Fordon: 'Véhicules',
       Värld: 'Monde',
     },
+    settings: {
+      kicker: 'Configuration & Mises à jour',
+      title: 'Paramètres',
+      subtitle:
+        'Réglez la plateforme par défaut, la langue, les filtres de carte, les notifications push, le cache local et les mises à jour APK.',
+      preferencesHeading: 'Préférences générales & Carte',
+      defaultPlatformLabel: 'Plateforme par défaut',
+      defaultPlatformHint: 'Filtre initial des mises à jour et affichage des touches console.',
+      languageLabel: 'Langue de l’interface',
+      languageHint: 'Appliqué immédiatement aux menus, guides, marqueurs et checklists.',
+      hideFoundLabel: 'Masquer les repères trouvés',
+      hideFoundHint: 'Affiche uniquement les objets et secrets restants sur la carte de Leonida.',
+      pushHeading: 'Notifications Push',
+      pushHint: 'Recevez une alerte dès qu’un nouveau patch GTA VI sort sur PS5 ou Xbox.',
+      pushStatusActive: 'Actif',
+      pushStatusInactive: 'Désactivé',
+      updatesHeading: 'Mises à jour (GitHub Releases)',
+      updatesHint: 'Vérifie la dernière APK Android signée via l’API GitHub.',
+      currentVersionLabel: 'Version installée',
+      repoLabel: 'Dépôt GitHub',
+      repoNotConfiguredHint:
+        'Définissez VITE_GITHUB_REPO dans .env ou modifiez DEFAULT_GITHUB_REPO dans updateService.ts.',
+      lastCheckedLabel: 'Dernière vérification',
+      checkUpdatesBtn: 'Rechercher des mises à jour',
+      checkingUpdatesBtn: 'Vérification GitHub...',
+      upToDateMsg: 'Vous disposez déjà de la dernière version.',
+      repoNotFoundError:
+        'Aucune release trouvée (404). Vérifiez que le dépôt est public et contient une release v*.',
+      rateLimitError: 'Limite API GitHub atteinte. Réessayez dans quelques minutes.',
+      checkFailedError: 'Impossible de contacter l’API GitHub Releases.',
+      cacheHeading: 'Cache local & Sync cloud',
+      cacheHint: 'Efface les patchs, progrès et filtres locaux sans supprimer votre ID appareil.',
+      deviceIdLabel: 'ID appareil',
+      cloudSyncLabel: 'Cloud Supabase',
+      resetCacheBtn: 'Réinitialiser le cache local',
+      confirmResetCacheBtn: 'Confirmer l’effacement',
+      cacheClearedMsg: 'Cache local vidé et paramètres restaurés.',
+    },
+    updateModal: {
+      kicker: 'Nouvelle version disponible',
+      title: 'Mise à jour trouvée pour Leonida Companion',
+      currentVersion: 'Version actuelle',
+      latestVersion: 'Dernière release',
+      releaseDate: 'Publiée le',
+      notesHeading: 'Notes de version',
+      noNotesFallback: 'APK Android signée générée automatiquement via GitHub Actions.',
+      downloadApkBtn: 'Télécharger l’APK signée',
+      openReleaseBtn: 'Voir la release sur GitHub',
+      laterBtn: 'Plus tard',
+    },
   },
   pt: {
     common: {
@@ -1115,6 +1418,7 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       map: 'Mapa',
       checklist: 'Checklist',
       guides: 'Guias e Cheats',
+      settings: 'Ajustes',
     },
     patches: {
       activeConsoleLabel: 'Console ativo',
@@ -1263,6 +1567,56 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       'Vapen & Strid': 'Armas e Combate',
       Fordon: 'Veículos',
       Värld: 'Mundo',
+    },
+    settings: {
+      kicker: 'Configuração do App & Releases',
+      title: 'Configurações',
+      subtitle:
+        'Defina plataforma padrão, idioma, filtros do mapa, notificações push, cache local e busque atualizações APK.',
+      preferencesHeading: 'Preferências gerais e Mapa',
+      defaultPlatformLabel: 'Plataforma padrão',
+      defaultPlatformHint: 'Filtro inicial para atualizações e layout dos botões do console.',
+      languageLabel: 'Idioma da interface',
+      languageHint: 'Aplicado imediatamente em menus, guias, mapa e checklists.',
+      hideFoundLabel: 'Ocultar marcadores encontrados',
+      hideFoundHint: 'Exibe apenas itens e segredos pendentes no mapa de Leonida.',
+      pushHeading: 'Notificações Push',
+      pushHint: 'Receba avisos sempre que sair um novo patch de GTA VI para PS5 ou Xbox.',
+      pushStatusActive: 'Ativo',
+      pushStatusInactive: 'Desativado',
+      updatesHeading: 'Atualizações do App (GitHub Releases)',
+      updatesHint: 'Verifica a última APK Android assinada diretamente pela API do GitHub.',
+      currentVersionLabel: 'Versão instalada',
+      repoLabel: 'Repositório GitHub',
+      repoNotConfiguredHint:
+        'Defina VITE_GITHUB_REPO no .env ou edite DEFAULT_GITHUB_REPO em updateService.ts.',
+      lastCheckedLabel: 'Última verificação',
+      checkUpdatesBtn: 'Buscar atualizações',
+      checkingUpdatesBtn: 'Consultando GitHub...',
+      upToDateMsg: 'Você já está usando a versão mais recente.',
+      repoNotFoundError:
+        'Nenhuma release encontrada (404). Confirme se o repositório é público e possui uma release v*.',
+      rateLimitError: 'Limite da API do GitHub atingido. Tente novamente em alguns minutos.',
+      checkFailedError: 'Não foi possível acessar a API do GitHub Releases.',
+      cacheHeading: 'Cache local e Nuvem',
+      cacheHint: 'Limpa patches, progresso e filtros salvos localmente sem apagar seu ID do dispositivo.',
+      deviceIdLabel: 'ID do dispositivo',
+      cloudSyncLabel: 'Nuvem Supabase',
+      resetCacheBtn: 'Redefinir cache local',
+      confirmResetCacheBtn: 'Confirmar limpeza',
+      cacheClearedMsg: 'Cache local limpo e padrões restaurados.',
+    },
+    updateModal: {
+      kicker: 'Nova versão disponível',
+      title: 'Atualização encontrada para o Leonida Companion',
+      currentVersion: 'Versão atual',
+      latestVersion: 'Última release',
+      releaseDate: 'Publicado em',
+      notesHeading: 'Notas da versão',
+      noNotesFallback: 'APK Android assinada gerada automaticamente via GitHub Actions.',
+      downloadApkBtn: 'Baixar APK assinada',
+      openReleaseBtn: 'Ver release no GitHub',
+      laterBtn: 'Depois',
     },
   },
 };

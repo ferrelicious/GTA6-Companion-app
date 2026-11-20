@@ -1,4 +1,4 @@
-import { CheckSquare, Gamepad2, Map as MapIcon, Newspaper } from 'lucide-react';
+import { CheckSquare, Gamepad2, Map as MapIcon, Newspaper, Settings } from 'lucide-react';
 import { useTranslation } from '../i18n/translations';
 import { MainTab } from '../types';
 
@@ -15,6 +15,7 @@ export function BottomNav({ activeTab, onSelectTab }: BottomNavProps) {
     { id: 'map', label: t.nav.map, icon: MapIcon },
     { id: 'checklist', label: t.nav.checklist, icon: CheckSquare },
     { id: 'guides', label: t.nav.guides, icon: Gamepad2 },
+    { id: 'settings', label: t.nav.settings, icon: Settings },
   ];
 
   return (
@@ -22,7 +23,7 @@ export function BottomNav({ activeTab, onSelectTab }: BottomNavProps) {
       aria-label={t.nav.ariaLabel}
       className="fixed bottom-0 left-0 right-0 z-40 leonida-glass border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
     >
-      <div className="max-w-3xl mx-auto grid grid-cols-4 h-16">
+      <div className="max-w-3xl mx-auto grid grid-cols-5 h-16">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -39,16 +40,16 @@ export function BottomNav({ activeTab, onSelectTab }: BottomNavProps) {
               {isActive && (
                 <span
                   aria-hidden="true"
-                  className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-0.5 rounded-full bg-gradient-to-r from-[#FF2A85] to-[#00F0FF]"
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-8 sm:w-10 h-0.5 rounded-full bg-gradient-to-r from-[#FF2A85] to-[#00F0FF]"
                 />
               )}
               <Icon
-                size={21}
+                size={20}
                 strokeWidth={isActive ? 2.25 : 1.75}
                 className={isActive ? 'text-[#00F0FF]' : 'text-current'}
               />
               <span
-                className={`mt-1 text-[11px] font-medium tracking-tight whitespace-nowrap truncate max-w-full ${
+                className={`mt-1 text-[10px] sm:text-[11px] font-medium tracking-tight whitespace-nowrap truncate max-w-full ${
                   isActive ? 'text-white' : 'text-slate-400'
                 }`}
               >

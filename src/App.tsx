@@ -4,9 +4,16 @@ import { ChecklistTab } from './components/ChecklistTab';
 import { GuidesCheatsTab } from './components/GuidesCheatsTab';
 import { LeonidaMapTab } from './components/LeonidaMapTab';
 import { PatchTrackerTab } from './components/PatchTrackerTab';
+import { SettingsTab } from './components/SettingsTab';
 import { TopBar } from './components/TopBar';
+import { UpdateModal } from './components/UpdateModal';
 import { LanguageProvider, useTranslation } from './i18n/translations';
 import { api } from './services/api';
+import {
+  checkForAppUpdate,
+  isGithubRepoConfigured,
+  UpdateCheckResult,
+} from './services/updateService';
 import {
   CheatCode,
   ChecklistCategoryMeta,
@@ -16,6 +23,7 @@ import {
   MapMarker,
   NewPatchInput,
   PatchNote,
+  PatchPlatformFilter,
   PlatformServerStatus,
   RadioStation,
 } from './types';
@@ -26,7 +34,14 @@ function CompanionShell() {
   const [selectedConsole, setSelectedConsole] = useState<ConsolePlatform>(() =>
     api.getSelectedConsole()
   );
+  const [defaultPlatformFilter, setDefaultPlatformFilter] = useState<PatchPlatformFilter>(() =>
+    api.getDefaultPlatformFilter()
+  );
+  const [hideFoundMarkers, setHideFoundMarkers] = useState<boolean>(() =>
+    api.getHideFoundMarkers()
+  );
   const [isLoading, setIsLoading] = useState(true);
+  const [availableUpdate, setAvailableUpdate] = useState<UpdateCheckResult | null>(null);
 
   const [patches, setPatches] = useState<PatchNote[]>([]);
   const [markers, setMarkers] = useState<MapMarker[]>([]);
@@ -40,47 +55,63 @@ function CompanionShell() {
   const [radioStations, setRadioStations] = useState<RadioStation[]>([]);
   const [serverStatus, setServerStatus] = useState<PlatformServerStatus[]>([]);
 
+  async function reloadAllData() {
+    const [
+      patchesData,
+      markersData,
+      foundIdsData,
+      checklistData,
+      completedIdsData,
+      cheatsData,
+      radioData,
+      statusData,
+    ] = await Promise.all([
+      api.getPatches(),
+      api.getMarkers(),
+      api.getFoundMarkerIds(),
+      api.getChecklistItems(),
+      api.getCompletedChecklistIds(),
+      api.getCheats(),
+      api.getRadioStations(),
+      api.getServerStatus(),
+    ]);
+
+    setPatches(patchesData);
+    setMarkers(markersData);
+    setFoundMarkerIds(foundIdsData);
+    setChecklistItems(checklistData);
+    setCompletedChecklistIds(completedIdsData);
+    setCheats(cheatsData);
+    setRadioStations(radioData);
+    setServerStatus(statusData);
+  }
+
   useEffect(() => {
     let active = true;
 
     async function loadCompanionData() {
       try {
-        const [
-          patchesData,
-          markersData,
-          foundIdsData,
-          checklistData,
-          completedIdsData,
-          cheatsData,
-          radioData,
-          statusData,
-        ] = await Promise.all([
-          api.getPatches(),
-          api.getMarkers(),
-          api.getFoundMarkerIds(),
-          api.getChecklistItems(),
-          api.getCompletedChecklistIds(),
-          api.getCheats(),
-          api.getRadioStations(),
-          api.getServerStatus(),
-        ]);
-
-        if (!active) return;
-
-        setPatches(patchesData);
-        setMarkers(markersData);
-        setFoundMarkerIds(foundIdsData);
-        setChecklistItems(checklistData);
-        setCompletedChecklistIds(completedIdsData);
-        setCheats(cheatsData);
-        setRadioStations(radioData);
-        setServerStatus(statusData);
+        await reloadAllData();
       } finally {
         if (active) setIsLoading(false);
       }
     }
 
     loadCompanionData();
+
+    // Silent background check for APK updates on startup if repo is configured
+    if (isGithubRepoConfigured()) {
+      checkForAppUpdate()
+        .then((res) => {
+          if (active && res.hasUpdate) {
+            setAvailableUpdate(res);
+          }
+        })
+        .catch(() => {
+          // Ignore silent startup check failures
+        });
+    }
+
     return () => {
       active = false;
     };
@@ -89,6 +120,26 @@ function CompanionShell() {
   function handleSelectConsole(platform: ConsolePlatform) {
     setSelectedConsole(platform);
     api.setSelectedConsole(platform);
+  }
+
+  function handleChangeDefaultPlatform(filter: PatchPlatformFilter) {
+    setDefaultPlatformFilter(filter);
+    api.setDefaultPlatformFilter(filter);
+    if (filter === 'ps5' || filter === 'xbox') {
+      handleSelectConsole(filter);
+    }
+  }
+
+  function handleToggleHideFoundMarkers(next: boolean) {
+    setHideFoundMarkers(next);
+    api.setHideFoundMarkers(next);
+  }
+
+  async function handleResetLocalCache() {
+    api.resetLocalCache();
+    setDefaultPlatformFilter('all');
+    setHideFoundMarkers(false);
+    await reloadAllData();
   }
 
   async function handleAddPatch(input: NewPatchInput) {
@@ -156,6 +207,7 @@ function CompanionShell() {
               <PatchTrackerTab
                 patches={patches}
                 selectedConsole={selectedConsole}
+                defaultPlatformFilter={defaultPlatformFilter}
                 onAddPatch={handleAddPatch}
               />
             )}
@@ -164,6 +216,8 @@ function CompanionShell() {
               <LeonidaMapTab
                 markers={markers}
                 foundMarkerIds={foundMarkerIds}
+                hideFound={hideFoundMarkers}
+                onToggleHideFound={handleToggleHideFoundMarkers}
                 onToggleFound={handleToggleMarkerFound}
                 onAddCustomMarker={handleAddCustomMarker}
                 onDeleteCustomMarker={handleDeleteCustomMarker}
@@ -188,11 +242,29 @@ function CompanionShell() {
                 serverStatus={serverStatus}
               />
             )}
+
+            {activeTab === 'settings' && (
+              <SettingsTab
+                defaultPlatformFilter={defaultPlatformFilter}
+                onChangeDefaultPlatform={handleChangeDefaultPlatform}
+                hideFoundMarkers={hideFoundMarkers}
+                onToggleHideFoundMarkers={handleToggleHideFoundMarkers}
+                onResetLocalCache={handleResetLocalCache}
+                onOpenUpdateModal={(info) => setAvailableUpdate(info)}
+              />
+            )}
           </>
         )}
       </main>
 
       <BottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
+
+      {availableUpdate && (
+        <UpdateModal
+          updateInfo={availableUpdate}
+          onClose={() => setAvailableUpdate(null)}
+        />
+      )}
     </div>
   );
 }
