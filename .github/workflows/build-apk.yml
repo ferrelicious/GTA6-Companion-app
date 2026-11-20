@@ -77,7 +77,7 @@ jobs:
           cd android
           ./gradlew assembleRelease
 
-      - name: Sign APK (or fallback to unsigned)
+      - name: Sign APK
         id: sign_apk
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -87,11 +87,12 @@ jobs:
         run: |
           UNSIGNED_APK="android/app/build/outputs/apk/release/app-release-unsigned.apk"
           FINAL_APK="GTA6-Companion-v1.0.${{ github.run_number }}.apk"
+          BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 | sort -V | tail -n 1)
+
+          "$BUILD_TOOLS/zipalign" -v -p 4 "$UNSIGNED_APK" aligned.apk
 
           if [ -n "$KEYSTORE_BASE64" ]; then
             echo "$KEYSTORE_BASE64" | base64 -d > release.keystore
-            BUILD_TOOLS=$(find "$ANDROID_HOME/build-tools" -maxdepth 1 -mindepth 1 | sort -V | tail -n 1)
-            "$BUILD_TOOLS/zipalign" -v -p 4 "$UNSIGNED_APK" aligned.apk
             "$BUILD_TOOLS/apksigner" sign \
               --ks release.keystore \
               --ks-pass "pass:$KEYSTORE_PASSWORD" \
@@ -99,11 +100,23 @@ jobs:
               --key-pass "pass:$KEY_PASSWORD" \
               --out "$FINAL_APK" \
               aligned.apk
-            rm -f release.keystore aligned.apk
+            rm -f release.keystore
           else
-            cp "$UNSIGNED_APK" "$FINAL_APK"
+            keytool -genkeypair -v -keystore temp.keystore -alias tempkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android \
+              -dname "CN=GTA6Companion, OU=Dev, O=Ferrelicious, L=Uppsala, C=SE"
+            "$BUILD_TOOLS/apksigner" sign \
+              --ks temp.keystore \
+              --ks-pass "pass:android" \
+              --ks-key-alias "tempkey" \
+              --key-pass "pass:android" \
+              --out "$FINAL_APK" \
+              aligned.apk
+            rm -f temp.keystore
           fi
 
+          rm -f aligned.apk
           echo "apk_name=$FINAL_APK" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
@@ -112,5 +125,5 @@ jobs:
           tag_name: v1.0.${{ github.run_number }}
           name: GTA 6 Companion v1.0.${{ github.run_number }}
           body: |
-            Automatiskt byggd release från commit `${{ github.sha }}`.
+            Automatiskt byggd och signerad release från commit `${{ github.sha }}`.
           files: ${{ steps.sign_apk.outputs.apk_name }}
