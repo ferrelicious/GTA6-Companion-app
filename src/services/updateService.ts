@@ -1,4 +1,5 @@
-export const APP_VERSION = '1.4.0';
+export const APP_VERSION =
+  (import.meta.env.VITE_APP_VERSION as string | undefined)?.trim() || '1.0.0';
 
 const DEFAULT_GITHUB_REPO = 'DITT_ANVANDARNAMN/DITT_REPO';
 
