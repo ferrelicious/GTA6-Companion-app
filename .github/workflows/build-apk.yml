@@ -41,9 +41,8 @@ jobs:
 
       - name: Prepare Capacitor Android project
         run: |
-          if [ ! -f "capacitor.config.json" ] && [ ! -f "capacitor.config.ts" ]; then
-            npx cap init "GTA6 Companion" "com.ferrelicious.gta6companion" --web-dir=dist
-          fi
+          rm -f capacitor.config.ts capacitor.config.json
+          npx cap init "GTA6 Companion" "com.ferrelicious.gta6companion" --web-dir=dist
           if [ ! -d "android" ]; then
             npx cap add android
           fi
