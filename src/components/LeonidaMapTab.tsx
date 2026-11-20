@@ -1,6 +1,7 @@
 import {
   Car,
   Check,
+  Compass,
   Crosshair,
   EyeOff,
   Flame,
@@ -18,13 +19,15 @@ import {
   FormEvent,
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
+  useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
   WheelEvent as ReactWheelEvent,
 } from 'react';
-import { LEONIDA_MAP_IMAGE } from '../data/markers';
 import { MapMarker, MarkerCategory } from '../types';
+import { LeonidaSvgMap } from './LeonidaSvgMap';
 
 interface LeonidaMapTabProps {
   markers: MapMarker[];
@@ -34,24 +37,38 @@ interface LeonidaMapTabProps {
   onDeleteCustomMarker: (markerId: string) => Promise<void>;
 }
 
+const STAGE_WIDTH = 1200;
+const STAGE_HEIGHT = 900;
+const MIN_ZOOM = 0.45;
+const MAX_ZOOM = 6.0;
+
 const ALL_CATEGORIES: {
   id: MarkerCategory;
   color: string;
-  bgClass: string;
   icon: typeof Crosshair;
 }[] = [
-  { id: 'Vapen', color: '#F43F5E', bgClass: 'bg-rose-500', icon: Crosshair },
-  { id: 'Gömda paket', color: '#00F0FF', bgClass: 'bg-[#00F0FF]', icon: Package },
-  { id: 'Speciella fordon', color: '#A855F7', bgClass: 'bg-purple-500', icon: Car },
-  { id: 'Affärer', color: '#10B981', bgClass: 'bg-emerald-500', icon: ShoppingBag },
-  { id: 'Hemligheter', color: '#FF2A85', bgClass: 'bg-[#FF2A85]', icon: Sparkles },
-  { id: 'Hopp/Stunts', color: '#F59E0B', bgClass: 'bg-amber-500', icon: Flame },
-  { id: 'Egna markörer', color: '#E2E8F0', bgClass: 'bg-slate-200', icon: MapPin },
+  { id: 'Vapen', color: '#F43F5E', icon: Crosshair },
+  { id: 'Gömda paket', color: '#00F0FF', icon: Package },
+  { id: 'Speciella fordon', color: '#A855F7', icon: Car },
+  { id: 'Affärer', color: '#10B981', icon: ShoppingBag },
+  { id: 'Hemligheter', color: '#FF2A85', icon: Sparkles },
+  { id: 'Hopp/Stunts', color: '#F59E0B', icon: Flame },
+  { id: 'Egna markörer', color: '#E2E8F0', icon: MapPin },
 ];
 
 const CATEGORY_META = Object.fromEntries(
   ALL_CATEGORIES.map((c) => [c.id, c])
 ) as Record<MarkerCategory, (typeof ALL_CATEGORIES)[number]>;
+
+const DISTRICT_PRESETS: { label: string; xPct: number; yPct: number; zoom: number }[] = [
+  { label: 'Vice City', xPct: 71, yPct: 46, zoom: 2.3 },
+  { label: 'Vice Beach', xPct: 84, yPct: 48, zoom: 2.8 },
+  { label: 'Leonida Keys', xPct: 46, yPct: 86, zoom: 1.9 },
+  { label: 'Grassrivers', xPct: 47, yPct: 62, zoom: 2.0 },
+  { label: 'Port Gellhorn', xPct: 18, yPct: 33, zoom: 2.6 },
+  { label: 'Ambrosia', xPct: 36, yPct: 40, zoom: 2.4 },
+  { label: 'Mount Kalaga', xPct: 37, yPct: 14, zoom: 2.1 },
+];
 
 export function LeonidaMapTab({
   markers,
@@ -68,18 +85,38 @@ export function LeonidaMapTab({
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(() => new Set());
 
   // Pan & Zoom state
-  const [zoom, setZoom] = useState(1.15);
-  const [pan, setPan] = useState({ x: -30, y: -20 });
+  const [zoom, setZoom] = useState(0.85);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [vpSize, setVpSize] = useState({ width: 900, height: 560 });
   const viewportRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const dragState = useRef<{
-    isDragging: boolean;
+  const minimapRef = useRef<HTMLDivElement>(null);
+
+  // Multi-touch & pointer tracking for mouse pan + touch pinch-zoom
+  const activePointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  const gestureRef = useRef<{
+    mode: 'none' | 'pan' | 'pinch';
     startX: number;
     startY: number;
-    originX: number;
-    originY: number;
+    originPanX: number;
+    originPanY: number;
     moved: boolean;
-  }>({ isDragging: false, startX: 0, startY: 0, originX: 0, originY: 0, moved: false });
+    initialPinchDist: number;
+    initialZoom: number;
+    pinchFocalX: number;
+    pinchFocalY: number;
+  }>({
+    mode: 'none',
+    startX: 0,
+    startY: 0,
+    originPanX: 0,
+    originPanY: 0,
+    moved: false,
+    initialPinchDist: 0,
+    initialZoom: 1,
+    pinchFocalX: 0,
+    pinchFocalY: 0,
+  });
 
   // Custom marker placement mode
   const [isPlaceMode, setIsPlaceMode] = useState(false);
@@ -104,6 +141,40 @@ export function LeonidaMapTab({
     [markers, selectedMarkerId]
   );
 
+  const clampZoom = useCallback((nextZoom: number) => {
+    return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(nextZoom.toFixed(2))));
+  }, []);
+
+  const resetView = useCallback(() => {
+    const vp = viewportRef.current;
+    if (!vp) return;
+    const rect = vp.getBoundingClientRect();
+    const fitZoom = clampZoom(Math.min(rect.width / STAGE_WIDTH, rect.height / STAGE_HEIGHT) * 0.96);
+    const centeredX = (rect.width - STAGE_WIDTH * fitZoom) / 2;
+    const centeredY = (rect.height - STAGE_HEIGHT * fitZoom) / 2;
+    setVpSize({ width: rect.width, height: rect.height });
+    setZoom(fitZoom);
+    setPan({ x: centeredX, y: centeredY });
+  }, [clampZoom]);
+
+  // Fit entire Leonida map cleanly on initial mount & observe viewport size changes
+  useEffect(() => {
+    resetView();
+    const vp = viewportRef.current;
+    if (!vp || typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setVpSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+    observer.observe(vp);
+    return () => observer.disconnect();
+  }, [resetView]);
+
   function toggleCategory(category: MarkerCategory) {
     setActiveCategories((prev) => {
       const next = new Set(prev);
@@ -114,10 +185,6 @@ export function LeonidaMapTab({
       }
       return next;
     });
-  }
-
-  function clampZoom(nextZoom: number) {
-    return Math.min(3.5, Math.max(0.85, Number(nextZoom.toFixed(2))));
   }
 
   function zoomAroundPoint(nextZoomRaw: number, clientX?: number, clientY?: number) {
@@ -140,54 +207,133 @@ export function LeonidaMapTab({
     setPan({ x: nextPanX, y: nextPanY });
   }
 
-  function resetView() {
-    setZoom(1.1);
-    setPan({ x: -20, y: -15 });
+  function focusOnCoordinates(xPct: number, yPct: number, targetZoom: number) {
+    const vp = viewportRef.current;
+    const clampedZoom = clampZoom(targetZoom);
+    const width = vp ? vp.clientWidth : vpSize.width;
+    const height = vp ? vp.clientHeight : vpSize.height;
+
+    const stageX = (xPct / 100) * STAGE_WIDTH * clampedZoom;
+    const stageY = (yPct / 100) * STAGE_HEIGHT * clampedZoom;
+
+    setZoom(clampedZoom);
+    setPan({
+      x: width / 2 - stageX,
+      y: height / 2 - stageY,
+    });
+  }
+
+  function getTwoPointerMetrics() {
+    const pts = Array.from(activePointers.current.values());
+    const p1 = pts[0];
+    const p2 = pts[1];
+    const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+    const midClientX = (p1.x + p2.x) / 2;
+    const midClientY = (p1.y + p2.y) / 2;
+    return { dist, midClientX, midClientY };
   }
 
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
-    dragState.current = {
-      isDragging: true,
-      startX: e.clientX,
-      startY: e.clientY,
-      originX: pan.x,
-      originY: pan.y,
-      moved: false,
-    };
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activePointers.current.size === 1) {
+      gestureRef.current = {
+        ...gestureRef.current,
+        mode: 'pan',
+        startX: e.clientX,
+        startY: e.clientY,
+        originPanX: pan.x,
+        originPanY: pan.y,
+        moved: false,
+      };
+    } else if (activePointers.current.size === 2) {
+      const vp = viewportRef.current;
+      const vpRect = vp?.getBoundingClientRect();
+      const { dist, midClientX, midClientY } = getTwoPointerMetrics();
+      gestureRef.current = {
+        ...gestureRef.current,
+        mode: 'pinch',
+        moved: true,
+        initialPinchDist: Math.max(dist, 1),
+        initialZoom: zoom,
+        originPanX: pan.x,
+        originPanY: pan.y,
+        pinchFocalX: vpRect ? midClientX - vpRect.left : vpSize.width / 2,
+        pinchFocalY: vpRect ? midClientY - vpRect.top : vpSize.height / 2,
+      };
+    }
   }
 
   function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
-    if (!dragState.current.isDragging) return;
-    const dx = e.clientX - dragState.current.startX;
-    const dy = e.clientY - dragState.current.startY;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
-      dragState.current.moved = true;
+    if (!activePointers.current.has(e.pointerId)) return;
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (gestureRef.current.mode === 'pinch' && activePointers.current.size >= 2) {
+      const { dist } = getTwoPointerMetrics();
+      const ratio = dist / gestureRef.current.initialPinchDist;
+      const nextZoom = clampZoom(gestureRef.current.initialZoom * ratio);
+      const scaleChange = nextZoom / gestureRef.current.initialZoom;
+      const fx = gestureRef.current.pinchFocalX;
+      const fy = gestureRef.current.pinchFocalY;
+
+      setZoom(nextZoom);
+      setPan({
+        x: fx - (fx - gestureRef.current.originPanX) * scaleChange,
+        y: fy - (fy - gestureRef.current.originPanY) * scaleChange,
+      });
+      return;
     }
-    setPan({
-      x: dragState.current.originX + dx,
-      y: dragState.current.originY + dy,
-    });
+
+    if (gestureRef.current.mode === 'pan' && activePointers.current.size === 1) {
+      const dx = e.clientX - gestureRef.current.startX;
+      const dy = e.clientY - gestureRef.current.startY;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) {
+        gestureRef.current.moved = true;
+      }
+      setPan({
+        x: gestureRef.current.originPanX + dx,
+        y: gestureRef.current.originPanY + dy,
+      });
+    }
   }
 
   function handlePointerUp(e: ReactPointerEvent<HTMLDivElement>) {
-    if (!dragState.current.isDragging) return;
-    dragState.current.isDragging = false;
+    const wasTap =
+      gestureRef.current.mode === 'pan' &&
+      !gestureRef.current.moved &&
+      activePointers.current.size === 1;
+
+    activePointers.current.delete(e.pointerId);
     try {
       (e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId);
     } catch {
-      // Ignore if pointer already released
+      // Ignorera om pointer redan släppts
     }
 
-    if (!dragState.current.moved && isPlaceMode) {
-      openDraftAtClientPos(e.clientX, e.clientY);
+    if (activePointers.current.size === 0) {
+      gestureRef.current.mode = 'none';
+      if (wasTap && isPlaceMode) {
+        openDraftAtClientPos(e.clientX, e.clientY);
+      }
+    } else if (activePointers.current.size === 1) {
+      const remaining = Array.from(activePointers.current.values())[0];
+      gestureRef.current = {
+        ...gestureRef.current,
+        mode: 'pan',
+        startX: remaining.x,
+        startY: remaining.y,
+        originPanX: pan.x,
+        originPanY: pan.y,
+        moved: true,
+      };
     }
   }
 
   function handleWheel(e: ReactWheelEvent<HTMLDivElement>) {
     e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.15 : 0.87;
+    const factor = e.deltaY < 0 ? 1.16 : 0.86;
     zoomAroundPoint(zoom * factor, e.clientX, e.clientY);
   }
 
@@ -214,6 +360,16 @@ export function LeonidaMapTab({
     setIsPlaceMode(false);
   }
 
+  function handleMinimapNavigate(e: ReactPointerEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    const box = minimapRef.current;
+    if (!box) return;
+    const rect = box.getBoundingClientRect();
+    const nx = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    const ny = Math.min(1, Math.max(0, (e.clientY - rect.top) / rect.height));
+    focusOnCoordinates(nx * 100, ny * 100, zoom);
+  }
+
   async function handleSaveCustomMarker(e: FormEvent) {
     e.preventDefault();
     if (!draftCoords || !draftTitle.trim()) return;
@@ -235,6 +391,22 @@ export function LeonidaMapTab({
       setIsSavingMarker(false);
     }
   }
+
+  // Minimap viewport indicator rect (percentage of 0-100)
+  const minimapRect = useMemo(() => {
+    const scaledW = STAGE_WIDTH * zoom;
+    const scaledH = STAGE_HEIGHT * zoom;
+    const leftPct = (-pan.x / scaledW) * 100;
+    const topPct = (-pan.y / scaledH) * 100;
+    const widthPct = (vpSize.width / scaledW) * 100;
+    const heightPct = (vpSize.height / scaledH) * 100;
+    return {
+      left: `${leftPct}%`,
+      top: `${topPct}%`,
+      width: `${widthPct}%`,
+      height: `${heightPct}%`,
+    };
+  }, [pan, zoom, vpSize]);
 
   const foundCount = markers.filter((m) => foundSet.has(m.id)).length;
 
@@ -307,10 +479,7 @@ export function LeonidaMapTab({
                   : 'bg-[#0D0F14] border-white/5 text-slate-500 hover:text-slate-300'
               }`}
             >
-              <Icon
-                size={14}
-                style={{ color: active ? cat.color : '#64748B' }}
-              />
+              <Icon size={14} style={{ color: active ? cat.color : '#64748B' }} />
               <span>{cat.id}</span>
               <span className="font-mono tabular-nums text-[11px] text-slate-400">
                 {count}
@@ -320,45 +489,60 @@ export function LeonidaMapTab({
         })}
       </div>
 
-      {/* Interactive Zoom & Pan Viewport */}
-      <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#080A0E]">
+      {/* Quick District Navigation */}
+      <div
+        aria-label="Snabbhopp till distrikt"
+        className="flex items-center gap-1.5 overflow-x-auto no-scrollbar"
+      >
+        <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 mr-1 shrink-0">
+          <Compass size={13} className="text-[#00F0FF]" />
+          <span>Distrikt:</span>
+        </span>
+        <button
+          type="button"
+          onClick={resetView}
+          className="min-h-[32px] px-2.5 py-1 rounded-lg bg-[#141720] border border-white/10 text-[11px] font-medium text-slate-300 hover:text-white hover:border-white/25 whitespace-nowrap shrink-0 cursor-pointer"
+        >
+          Hela Leonida
+        </button>
+        {DISTRICT_PRESETS.map((dist) => (
+          <button
+            key={dist.label}
+            type="button"
+            onClick={() => focusOnCoordinates(dist.xPct, dist.yPct, dist.zoom)}
+            className="min-h-[32px] px-2.5 py-1 rounded-lg bg-[#141720] border border-white/10 text-[11px] font-medium text-slate-300 hover:text-[#00F0FF] hover:border-[#00F0FF]/40 whitespace-nowrap shrink-0 cursor-pointer"
+          >
+            {dist.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Interactive Zoom & Pan SVG Viewport */}
+      <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#080C14]">
         <div
           ref={viewportRef}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
           onWheel={handleWheel}
           onDoubleClick={handleDoubleClick}
-          className={`relative w-full h-[58vh] min-h-[420px] lg:h-[65vh] overflow-hidden select-none touch-none ${
+          className={`relative w-full h-[60vh] min-h-[430px] lg:h-[68vh] overflow-hidden select-none touch-none ${
             isPlaceMode ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'
           }`}
         >
-          {/* Transformed Stage */}
+          {/* Transformed SVG Stage */}
           <div
             ref={stageRef}
             style={{
+              width: `${STAGE_WIDTH}px`,
+              height: `${STAGE_HEIGHT}px`,
               transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
               transformOrigin: '0 0',
             }}
-            className="relative w-[920px] sm:w-[1150px] aspect-[4/3]"
+            className="relative"
           >
-            <img
-              src={LEONIDA_MAP_IMAGE}
-              alt="Taktisk karta över Leonida och Vice City"
-              draggable={false}
-              referrerPolicy="no-referrer"
-              className="w-full h-full object-cover pointer-events-none select-none"
-            />
-
-            {/* Subtle Region Labels on Map */}
-            <div className="pointer-events-none absolute inset-0 text-[11px] font-display font-semibold tracking-wider text-slate-300/60 select-none">
-              <span className="absolute left-[18%] top-[23%]">Port Gellhorn</span>
-              <span className="absolute left-[49%] top-[12%]">Lake Leonida</span>
-              <span className="absolute left-[45%] top-[59%]">Grassrivers</span>
-              <span className="absolute left-[66%] top-[48%]">Downtown Vice</span>
-              <span className="absolute left-[82%] top-[44%]">Vice Beach</span>
-              <span className="absolute left-[43%] top-[89%]">Leonida Keys</span>
-            </div>
+            <LeonidaSvgMap zoom={zoom} />
 
             {/* Interactive Markers */}
             {visibleMarkers.map((marker) => {
@@ -382,14 +566,12 @@ export function LeonidaMapTab({
                     top: `${marker.y}%`,
                     transform: `translate(-50%, -50%) scale(${1 / zoom})`,
                   }}
-                  className={`absolute z-10 flex items-center justify-center w-9 h-9 rounded-full border transition-opacity cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
-                    isSelected
-                      ? 'ring-2 ring-white scale-110 z-20'
-                      : ''
+                  className={`absolute z-10 flex items-center justify-center w-9 h-9 rounded-full transition-opacity cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                    isSelected ? 'ring-2 ring-white z-20' : ''
                   } ${isFound ? 'opacity-40' : 'opacity-100 hover:opacity-100'}`}
                 >
                   <span
-                    className="flex items-center justify-center w-8 h-8 rounded-full bg-[#0D0F14]/90 border-2 shadow-lg"
+                    className="flex items-center justify-center w-8 h-8 rounded-full bg-[#080C14]/90 border-2 shadow-lg"
                     style={{ borderColor: meta.color }}
                   >
                     <Icon size={15} style={{ color: meta.color }} />
@@ -397,7 +579,7 @@ export function LeonidaMapTab({
                   {isFound && (
                     <span
                       aria-hidden="true"
-                      className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-[#0D0F14] flex items-center justify-center"
+                      className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 text-[#080C14] flex items-center justify-center"
                     >
                       <Check size={10} strokeWidth={3} />
                     </span>
@@ -408,27 +590,71 @@ export function LeonidaMapTab({
           </div>
         </div>
 
-        {/* Map Controls Overlay (Zoom + Reset + Hint) */}
+        {/* Interaktiv Minimap (övre högra hörnet) */}
+        <div
+          ref={minimapRef}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            handleMinimapNavigate(e);
+          }}
+          onPointerMove={(e) => {
+            if (e.buttons === 1) {
+              handleMinimapNavigate(e);
+            }
+          }}
+          title="Klicka eller dra i minimapen för att flytta vyn"
+          className="absolute top-3 right-3 z-20 w-32 sm:w-44 aspect-[4/3] rounded-xl overflow-hidden bg-[#080C14]/95 border border-white/20 shadow-xl cursor-crosshair select-none"
+        >
+          <LeonidaSvgMap zoom={1} isMinimap />
+
+          {/* Små punkter på minimapen för aktiva markörer */}
+          <div className="absolute inset-0 pointer-events-none">
+            {visibleMarkers.map((m) => {
+              const meta = CATEGORY_META[m.category] ?? CATEGORY_META['Egna markörer'];
+              return (
+                <span
+                  key={`mini-${m.id}`}
+                  style={{
+                    left: `${m.x}%`,
+                    top: `${m.y}%`,
+                    backgroundColor: meta.color,
+                  }}
+                  className={`absolute w-1 h-1 -translate-x-1/2 -translate-y-1/2 rounded-full ${
+                    foundSet.has(m.id) ? 'opacity-30' : 'opacity-90'
+                  }`}
+                />
+              );
+            })}
+          </div>
+
+          {/* Synlig vy-rektangel */}
+          <div
+            style={minimapRect}
+            className="absolute border border-[#00F0FF] bg-[#00F0FF]/15 pointer-events-none"
+          />
+        </div>
+
+        {/* Kartkontroller (Zoom +/-, Återställ vy & hjälptext) */}
         <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between pointer-events-none">
-          <div className="pointer-events-auto px-3 py-1.5 rounded-xl leonida-glass text-[11px] text-slate-300 hidden sm:block">
-            Dra för att panorera · Scrolla för att zooma · Dubbelklicka för egen markör
+          <div className="pointer-events-auto px-3 py-1.5 rounded-xl leonida-glass text-[11px] text-slate-300 hidden md:block">
+            Dra för att panorera · Scrolla eller nyp för gatunivå-zoom · Dubbelklicka för egen markör
           </div>
 
           <div className="pointer-events-auto flex items-center gap-1.5 ml-auto">
             <button
               type="button"
-              onClick={() => zoomAroundPoint(zoom - 0.3)}
+              onClick={() => zoomAroundPoint(zoom * 0.72)}
               aria-label="Zooma ut"
               className="w-10 h-10 rounded-xl leonida-glass flex items-center justify-center text-slate-200 hover:text-white cursor-pointer"
             >
               <Minus size={16} />
             </button>
-            <span className="px-2.5 h-10 rounded-xl leonida-glass flex items-center justify-center font-mono text-xs tabular-nums text-slate-300">
+            <span className="px-2.5 h-10 rounded-xl leonida-glass flex items-center justify-center font-mono text-xs tabular-nums text-slate-200">
               {Math.round(zoom * 100)}%
             </span>
             <button
               type="button"
-              onClick={() => zoomAroundPoint(zoom + 0.3)}
+              onClick={() => zoomAroundPoint(zoom * 1.38)}
               aria-label="Zooma in"
               className="w-10 h-10 rounded-xl leonida-glass flex items-center justify-center text-slate-200 hover:text-white cursor-pointer"
             >
@@ -437,10 +663,12 @@ export function LeonidaMapTab({
             <button
               type="button"
               onClick={resetView}
-              aria-label="Återställ kartvy"
-              className="w-10 h-10 rounded-xl leonida-glass flex items-center justify-center text-slate-200 hover:text-white cursor-pointer"
+              aria-label="Återställ vy"
+              title="Återställ vy"
+              className="h-10 px-3 rounded-xl leonida-glass inline-flex items-center gap-1.5 text-xs font-medium text-slate-200 hover:text-white cursor-pointer"
             >
-              <RotateCcw size={15} />
+              <RotateCcw size={14} />
+              <span className="hidden sm:inline">Återställ vy</span>
             </button>
           </div>
         </div>
