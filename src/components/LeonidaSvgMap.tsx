@@ -3,16 +3,26 @@ interface LeonidaSvgMapProps {
   zoom: number;
   /** Förenklad version utan textetiketter för minimapen */
   isMinimap?: boolean;
+  /** Simulerar natt-läge i Leonida med dämpad ljusstyrka och högre neon-kontrast */
+  isNightMode?: boolean;
 }
 
-export function LeonidaSvgMap({ zoom, isMinimap = false }: LeonidaSvgMapProps) {
+export function LeonidaSvgMap({
+  zoom,
+  isMinimap = false,
+  isNightMode = false,
+}: LeonidaSvgMapProps) {
   const showStreetDetail = !isMinimap && zoom >= 1.6;
   const showMicroLabels = !isMinimap && zoom >= 2.2;
 
   return (
     <svg
       viewBox="0 0 1600 1200"
-      className="w-full h-full block select-none pointer-events-none"
+      className={`w-full h-full block select-none pointer-events-none transition-[filter] duration-300 ${
+        isNightMode
+          ? 'brightness-[0.62] contrast-[1.32] saturate-[1.2]'
+          : 'brightness-[1.22] contrast-[0.95] saturate-[1.04]'
+      }`}
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >

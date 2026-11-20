@@ -146,6 +146,9 @@ export interface TranslationDictionary {
     title: string;
     hideFound: string;
     showingUnfound: string;
+    dayMode: string;
+    nightMode: string;
+    toggleDayNightAria: string;
     addMarkerBtn: string;
     tapMapHint: string;
     districtsLabel: string;
@@ -358,6 +361,9 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       title: 'Interactive Map: Leonida & Vice City',
       hideFound: 'Hide found',
       showingUnfound: 'Unfound only',
+      dayMode: 'Day mode',
+      nightMode: 'Night mode',
+      toggleDayNightAria: 'Toggle map day and night mode',
       addMarkerBtn: 'Add marker',
       tapMapHint: 'Tap on the map...',
       districtsLabel: 'Districts:',
@@ -586,6 +592,9 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       title: 'Interaktiv Karta: Leonida & Vice City',
       hideFound: 'Dölj hittade',
       showingUnfound: 'Visar endast ohittade',
+      dayMode: 'Dagläge',
+      nightMode: 'Nattläge',
+      toggleDayNightAria: 'Växla mellan dag- och nattläge på kartan',
       addMarkerBtn: 'Lägg till markör',
       tapMapHint: 'Tryck på kartan...',
       districtsLabel: 'Distrikt:',
@@ -814,6 +823,9 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       title: 'Mapa Interactivo: Leonida y Vice City',
       hideFound: 'Ocultar encontrados',
       showingUnfound: 'Solo pendientes',
+      dayMode: 'Modo día',
+      nightMode: 'Modo noche',
+      toggleDayNightAria: 'Cambiar entre modo día y noche en el mapa',
       addMarkerBtn: 'Añadir marcador',
       tapMapHint: 'Toca en el mapa...',
       districtsLabel: 'Distritos:',
@@ -1042,6 +1054,9 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       title: 'Interaktive Karte: Leonida & Vice City',
       hideFound: 'Gefundene ausblenden',
       showingUnfound: 'Nur unentdeckte',
+      dayMode: 'Tagmodus',
+      nightMode: 'Nachtmodus',
+      toggleDayNightAria: 'Zwischen Tag- und Nachtmodus der Karte wechseln',
       addMarkerBtn: 'Marker setzen',
       tapMapHint: 'Auf Karte tippen...',
       districtsLabel: 'Bezirke:',
@@ -1270,6 +1285,9 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       title: 'Carte Interactive : Leonida & Vice City',
       hideFound: 'Masquer trouvés',
       showingUnfound: 'Non trouvés uniquement',
+      dayMode: 'Mode jour',
+      nightMode: 'Mode nuit',
+      toggleDayNightAria: 'Basculer entre le mode jour et nuit sur la carte',
       addMarkerBtn: 'Ajouter repère',
       tapMapHint: 'Touchez la carte...',
       districtsLabel: 'Quartiers :',
@@ -1498,6 +1516,9 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       title: 'Mapa Interativo: Leonida e Vice City',
       hideFound: 'Ocultar encontrados',
       showingUnfound: 'Somente pendentes',
+      dayMode: 'Modo dia',
+      nightMode: 'Modo noite',
+      toggleDayNightAria: 'Alternar entre modo dia e noite no mapa',
       addMarkerBtn: 'Adicionar marcador',
       tapMapHint: 'Toque no mapa...',
       districtsLabel: 'Distritos:',

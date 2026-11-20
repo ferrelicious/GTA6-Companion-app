@@ -7,11 +7,13 @@ import {
   Flame,
   MapPin,
   Minus,
+  Moon,
   Package,
   Plus,
   RotateCcw,
   ShoppingBag,
   Sparkles,
+  Sun,
   Trash2,
   X,
 } from 'lucide-react';
@@ -89,6 +91,26 @@ export function LeonidaMapTab({
   );
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(() => new Set());
+  const [isNightMode, setIsNightMode] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return window.localStorage.getItem('leonida_map_night_mode_v1') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  function handleToggleNightMode() {
+    setIsNightMode((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem('leonida_map_night_mode_v1', String(next));
+      } catch {
+        // Ignorera lagringsfel
+      }
+      return next;
+    });
+  }
 
   // Pan & Zoom state
   const [zoom, setZoom] = useState(0.85);
@@ -436,6 +458,21 @@ export function LeonidaMapTab({
         <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
+            onClick={handleToggleNightMode}
+            aria-pressed={isNightMode}
+            aria-label={t.map.toggleDayNightAria}
+            className={`inline-flex items-center gap-1.5 min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
+              isNightMode
+                ? 'bg-[#6366F1]/20 border-[#818CF8]/50 text-[#A5B4FC]'
+                : 'bg-amber-500/15 border-amber-400/40 text-amber-200 hover:bg-amber-500/20'
+            }`}
+          >
+            {isNightMode ? <Moon size={14} /> : <Sun size={14} />}
+            <span>{isNightMode ? t.map.nightMode : t.map.dayMode}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => onToggleHideFound(!hideFound)}
             aria-pressed={hideFound}
             className={`inline-flex items-center gap-1.5 min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
@@ -548,7 +585,7 @@ export function LeonidaMapTab({
             }}
             className="relative"
           >
-            <LeonidaSvgMap zoom={zoom} />
+            <LeonidaSvgMap zoom={zoom} isNightMode={isNightMode} />
 
             {visibleMarkers.map((marker) => {
               const meta = CATEGORY_META[marker.category] ?? CATEGORY_META['Egna markörer'];
@@ -612,7 +649,7 @@ export function LeonidaMapTab({
           title={t.map.minimapTitle}
           className="absolute top-3 right-3 z-20 w-32 sm:w-44 aspect-[4/3] rounded-xl overflow-hidden bg-[#080C14]/95 border border-white/20 shadow-xl cursor-crosshair select-none"
         >
-          <LeonidaSvgMap zoom={1} isMinimap />
+          <LeonidaSvgMap zoom={1} isMinimap isNightMode={isNightMode} />
 
           <div className="absolute inset-0 pointer-events-none">
             {visibleMarkers.map((m) => {
