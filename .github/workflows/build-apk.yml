@@ -30,6 +30,7 @@ jobs:
           VITE_GITHUB_REPO: ${{ github.repository }}
         run: |
           npm install --legacy-peer-deps
+          npm install @capacitor/core @capacitor/cli @capacitor/android --legacy-peer-deps
           npm run build
 
       - name: Setup Java 21
@@ -40,6 +41,9 @@ jobs:
 
       - name: Prepare Capacitor Android project
         run: |
+          if [ ! -f "capacitor.config.json" ] && [ ! -f "capacitor.config.ts" ]; then
+            npx cap init "GTA6 Companion" "com.ferrelicious.gta6companion" --web-dir=dist
+          fi
           if [ ! -d "android" ]; then
             npx cap add android
           fi
@@ -48,7 +52,6 @@ jobs:
 
       - name: Fix Kotlin duplicate classes & bump version
         run: |
-          # Tvinga alla Gradle-moduler att använda samma Kotlin-version (löser Duplicate class-felet)
           cat << 'EOF' >> android/build.gradle
 
           subprojects {
@@ -62,7 +65,6 @@ jobs:
           }
           EOF
 
-          # Uppdatera versionCode och versionName automatiskt baserat på run_number
           sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/g" android/app/build.gradle
           sed -i "s/versionName \"[^\"]*\"/versionName \"1.0.${{ github.run_number }}\"/g" android/app/build.gradle
 
@@ -95,7 +97,6 @@ jobs:
               aligned.apk
             rm -f release.keystore aligned.apk
           else
-            echo "VARNING: KEYSTORE_BASE64 saknas i GitHub Secrets. Sparar osignerad APK."
             cp "$UNSIGNED_APK" "$FINAL_APK"
           fi
 
@@ -108,5 +109,4 @@ jobs:
           name: GTA 6 Companion v1.0.${{ github.run_number }}
           body: |
             Automatiskt byggd release från commit `${{ github.sha }}`.
-            Installera `.apk`-filen nedan direkt på din Android-enhet.
           files: ${{ steps.sign_apk.outputs.apk_name }}
