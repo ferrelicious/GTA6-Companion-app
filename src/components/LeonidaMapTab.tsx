@@ -5,15 +5,17 @@ import {
   Crosshair,
   EyeOff,
   Flame,
+  Globe,
+  Layers,
   MapPin,
   Minus,
   Moon,
+  Navigation,
   Package,
   Plus,
   RotateCcw,
   ShoppingBag,
   Sparkles,
-  Sun,
   Trash2,
   X,
 } from 'lucide-react';
@@ -29,8 +31,8 @@ import {
   WheelEvent as ReactWheelEvent,
 } from 'react';
 import { useTranslation } from '../i18n/translations';
-import { MapMarker, MarkerCategory } from '../types';
-import { LeonidaSvgMap } from './LeonidaSvgMap';
+import { MapMarker, MapMode, MarkerCategory } from '../types';
+import { LeonidaSvgMap, PLAYER_ANCHOR_PCT, SvgWaypoint } from './LeonidaSvgMap';
 
 interface LeonidaMapTabProps {
   markers: MapMarker[];
@@ -91,25 +93,25 @@ export function LeonidaMapTab({
   );
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(() => new Set());
-  const [isNightMode, setIsNightMode] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
+  const [mapMode, setMapMode] = useState<MapMode>(() => {
+    if (typeof window === 'undefined') return 'atlas';
     try {
-      return window.localStorage.getItem('leonida_map_night_mode_v1') === 'true';
+      const saved = window.localStorage.getItem('leonida_map_mode_v1');
+      return saved === 'satellite' || saved === 'night' ? saved : 'atlas';
     } catch {
-      return false;
+      return 'atlas';
     }
   });
+  const [waypoint, setWaypoint] = useState<SvgWaypoint | null>(null);
+  const [cursorCoords, setCursorCoords] = useState<SvgWaypoint>(PLAYER_ANCHOR_PCT);
 
-  function handleToggleNightMode() {
-    setIsNightMode((prev) => {
-      const next = !prev;
-      try {
-        window.localStorage.setItem('leonida_map_night_mode_v1', String(next));
-      } catch {
-        // Ignorera lagringsfel
-      }
-      return next;
-    });
+  function handleSelectMapMode(mode: MapMode) {
+    setMapMode(mode);
+    try {
+      window.localStorage.setItem('leonida_map_mode_v1', mode);
+    } catch {
+      // Ignorera lagringsfel
+    }
   }
 
   // Pan & Zoom state
@@ -297,7 +299,25 @@ export function LeonidaMapTab({
     }
   }
 
+  function clientPosToMapPct(clientX: number, clientY: number): SvgWaypoint | null {
+    const stage = stageRef.current;
+    if (!stage) return null;
+    const rect = stage.getBoundingClientRect();
+    const xPercent = ((clientX - rect.left) / rect.width) * 100;
+    const yPercent = ((clientY - rect.top) / rect.height) * 100;
+    if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return null;
+    return {
+      x: Number(xPercent.toFixed(1)),
+      y: Number(yPercent.toFixed(1)),
+    };
+  }
+
   function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const hovered = clientPosToMapPct(e.clientX, e.clientY);
+    if (hovered) {
+      setCursorCoords(hovered);
+    }
+
     if (!activePointers.current.has(e.pointerId)) return;
     activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
@@ -345,8 +365,15 @@ export function LeonidaMapTab({
 
     if (activePointers.current.size === 0) {
       gestureRef.current.mode = 'none';
-      if (wasTap && isPlaceMode) {
-        openDraftAtClientPos(e.clientX, e.clientY);
+      if (wasTap) {
+        if (isPlaceMode) {
+          openDraftAtClientPos(e.clientX, e.clientY);
+        } else {
+          const clicked = clientPosToMapPct(e.clientX, e.clientY);
+          if (clicked) {
+            setWaypoint(clicked);
+          }
+        }
       }
     } else if (activePointers.current.size === 1) {
       const remaining = Array.from(activePointers.current.values())[0];
@@ -373,18 +400,10 @@ export function LeonidaMapTab({
   }
 
   function openDraftAtClientPos(clientX: number, clientY: number) {
-    const stage = stageRef.current;
-    if (!stage) return;
-    const rect = stage.getBoundingClientRect();
-    const xPercent = ((clientX - rect.left) / rect.width) * 100;
-    const yPercent = ((clientY - rect.top) / rect.height) * 100;
+    const coords = clientPosToMapPct(clientX, clientY);
+    if (!coords) return;
 
-    if (xPercent < 0 || xPercent > 100 || yPercent < 0 || yPercent > 100) return;
-
-    setDraftCoords({
-      x: Number(xPercent.toFixed(1)),
-      y: Number(yPercent.toFixed(1)),
-    });
+    setDraftCoords(coords);
     setDraftCategory('Egna markörer');
     setDraftTitle('');
     setDraftDesc('');
@@ -439,6 +458,16 @@ export function LeonidaMapTab({
 
   const foundCount = markers.filter((m) => foundSet.has(m.id)).length;
 
+  const activeCoords = waypoint ?? cursorCoords;
+  const worldX = Math.round((activeCoords.x - 50) * 80);
+  const worldY = Math.round((50 - activeCoords.y) * 60);
+  const waypointDistanceKm = waypoint
+    ? Math.hypot(
+        ((waypoint.x - PLAYER_ANCHOR_PCT.x) / 100) * 14.0,
+        ((waypoint.y - PLAYER_ANCHOR_PCT.y) / 100) * 10.5
+      ).toFixed(2)
+    : null;
+
   return (
     <section aria-labelledby="map-heading" className="space-y-4">
       {/* Header */}
@@ -456,21 +485,6 @@ export function LeonidaMapTab({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={handleToggleNightMode}
-            aria-pressed={isNightMode}
-            aria-label={t.map.toggleDayNightAria}
-            className={`inline-flex items-center gap-1.5 min-h-[40px] px-3 py-1.5 rounded-xl text-xs font-medium border transition-colors cursor-pointer ${
-              isNightMode
-                ? 'bg-[#6366F1]/20 border-[#818CF8]/50 text-[#A5B4FC]'
-                : 'bg-amber-500/15 border-amber-400/40 text-amber-200 hover:bg-amber-500/20'
-            }`}
-          >
-            {isNightMode ? <Moon size={14} /> : <Sun size={14} />}
-            <span>{isNightMode ? t.map.nightMode : t.map.dayMode}</span>
-          </button>
-
           <button
             type="button"
             onClick={() => onToggleHideFound(!hideFound)}
@@ -585,7 +599,7 @@ export function LeonidaMapTab({
             }}
             className="relative"
           >
-            <LeonidaSvgMap zoom={zoom} isNightMode={isNightMode} />
+            <LeonidaSvgMap zoom={zoom} mapMode={mapMode} waypoint={waypoint} />
 
             {visibleMarkers.map((marker) => {
               const meta = CATEGORY_META[marker.category] ?? CATEGORY_META['Egna markörer'];
@@ -634,6 +648,44 @@ export function LeonidaMapTab({
           </div>
         </div>
 
+        {/* 3-läges Kartväxlare i övre vänstra hörnet (Atlas / Satellit / Värmekarta & Natt) */}
+        <div
+          role="group"
+          aria-label={t.map.mapModeAria}
+          className="absolute top-3 left-3 z-20 inline-flex items-center p-1 rounded-xl leonida-glass border border-white/15 shadow-xl"
+        >
+          {(
+            [
+              { id: 'atlas', label: t.map.mapModeAtlas, icon: Layers },
+              { id: 'satellite', label: t.map.mapModeSatellite, icon: Globe },
+              { id: 'night', label: t.map.mapModeNight, icon: Moon },
+            ] as const
+          ).map((modeOpt) => {
+            const Icon = modeOpt.icon;
+            const active = mapMode === modeOpt.id;
+            return (
+              <button
+                key={modeOpt.id}
+                type="button"
+                onClick={() => handleSelectMapMode(modeOpt.id)}
+                aria-pressed={active}
+                className={`inline-flex items-center gap-1.5 min-h-[34px] px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                  active
+                    ? modeOpt.id === 'night'
+                      ? 'bg-[#FF2A85]/20 text-[#FF2A85] border border-[#FF2A85]/45'
+                      : 'bg-[#00F0FF]/15 text-[#00F0FF] border border-[#00F0FF]/45'
+                    : 'text-slate-300 hover:text-white border border-transparent'
+                }`}
+              >
+                <Icon size={13} />
+                <span className={modeOpt.id === 'night' ? 'hidden sm:inline' : ''}>
+                  {modeOpt.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Interaktiv Minimap */}
         <div
           ref={minimapRef}
@@ -647,9 +699,9 @@ export function LeonidaMapTab({
             }
           }}
           title={t.map.minimapTitle}
-          className="absolute top-3 right-3 z-20 w-32 sm:w-44 aspect-[4/3] rounded-xl overflow-hidden bg-[#080C14]/95 border border-white/20 shadow-xl cursor-crosshair select-none"
+          className="absolute top-3 right-3 z-20 w-28 sm:w-44 aspect-[4/3] rounded-xl overflow-hidden bg-[#080C14]/95 border border-white/20 shadow-xl cursor-crosshair select-none"
         >
-          <LeonidaSvgMap zoom={1} isMinimap isNightMode={isNightMode} />
+          <LeonidaSvgMap zoom={1} isMinimap mapMode={mapMode} waypoint={waypoint} />
 
           <div className="absolute inset-0 pointer-events-none">
             {visibleMarkers.map((m) => {
@@ -676,10 +728,37 @@ export function LeonidaMapTab({
           />
         </div>
 
-        {/* Map Controls */}
-        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between pointer-events-none">
-          <div className="pointer-events-auto px-3 py-1.5 rounded-xl leonida-glass text-[11px] text-slate-300 hidden md:block">
-            {t.map.controlsHint}
+        {/* Pause-Menu Bottom HUD: Coordinates, Waypoint Distance & Zoom Controls */}
+        <div className="absolute bottom-3 left-3 right-3 flex flex-wrap items-end justify-between gap-2 pointer-events-none">
+          <div className="pointer-events-auto flex flex-wrap items-center gap-2 px-3 py-1.5 rounded-xl leonida-glass border border-white/15 text-[11px] text-slate-200">
+            <span className="font-mono tabular-nums text-[#00F0FF]">
+              X:{worldX} · Y:{worldY}
+            </span>
+
+            {waypoint && waypointDistanceKm ? (
+              <>
+                <span aria-hidden="true" className="text-slate-600">|</span>
+                <span className="inline-flex items-center gap-1.5 font-semibold text-fuchsia-300 font-mono tabular-nums">
+                  <Navigation size={12} className="text-fuchsia-400" />
+                  <span>
+                    {t.map.waypointLabel} · {t.map.distanceLabel} {waypointDistanceKm} km
+                  </span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setWaypoint(null)}
+                  className="ml-0.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[10px] font-medium text-white cursor-pointer"
+                >
+                  <X size={11} />
+                  <span>{t.map.clearWaypoint}</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <span aria-hidden="true" className="text-slate-600 hidden lg:inline">|</span>
+                <span className="text-slate-400 hidden lg:inline">{t.map.waypointSetHint}</span>
+              </>
+            )}
           </div>
 
           <div className="pointer-events-auto flex items-center gap-1.5 ml-auto">

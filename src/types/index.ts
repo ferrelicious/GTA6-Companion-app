@@ -4,6 +4,8 @@ export type MainTab = 'patches' | 'map' | 'checklist' | 'guides' | 'settings';
 
 export type PatchPlatformFilter = 'all' | 'ps5' | 'xbox';
 
+export type MapMode = 'atlas' | 'satellite' | 'night';
+
 export interface PatchNote {
   id: string;
   version: string;

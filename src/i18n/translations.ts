@@ -149,6 +149,14 @@ export interface TranslationDictionary {
     dayMode: string;
     nightMode: string;
     toggleDayNightAria: string;
+    mapModeAtlas: string;
+    mapModeSatellite: string;
+    mapModeNight: string;
+    mapModeAria: string;
+    waypointLabel: string;
+    waypointSetHint: string;
+    clearWaypoint: string;
+    distanceLabel: string;
     addMarkerBtn: string;
     tapMapHint: string;
     districtsLabel: string;
@@ -364,6 +372,14 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       dayMode: 'Day mode',
       nightMode: 'Night mode',
       toggleDayNightAria: 'Toggle map day and night mode',
+      mapModeAtlas: 'Atlas',
+      mapModeSatellite: 'Satellite',
+      mapModeNight: 'Heatmap / Night',
+      mapModeAria: 'Map visual mode',
+      waypointLabel: 'Waypoint',
+      waypointSetHint: 'Click map to set Waypoint · Drag to pan · Double-click for custom pin',
+      clearWaypoint: 'Clear',
+      distanceLabel: 'Dist',
       addMarkerBtn: 'Add marker',
       tapMapHint: 'Tap on the map...',
       districtsLabel: 'Districts:',
@@ -595,6 +611,14 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       dayMode: 'Dagläge',
       nightMode: 'Nattläge',
       toggleDayNightAria: 'Växla mellan dag- och nattläge på kartan',
+      mapModeAtlas: 'Atlas',
+      mapModeSatellite: 'Satellit',
+      mapModeNight: 'Värmekarta / Natt',
+      mapModeAria: 'Kartläge',
+      waypointLabel: 'Waypoint',
+      waypointSetHint: 'Klicka på kartan för Waypoint · Dra för att panorera · Dubbelklick för markör',
+      clearWaypoint: 'Rensa',
+      distanceLabel: 'Avst',
       addMarkerBtn: 'Lägg till markör',
       tapMapHint: 'Tryck på kartan...',
       districtsLabel: 'Distrikt:',
@@ -826,6 +850,14 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       dayMode: 'Modo día',
       nightMode: 'Modo noche',
       toggleDayNightAria: 'Cambiar entre modo día y noche en el mapa',
+      mapModeAtlas: 'Atlas',
+      mapModeSatellite: 'Satélite',
+      mapModeNight: 'Mapa térmico / Noche',
+      mapModeAria: 'Modo de mapa',
+      waypointLabel: 'Destino',
+      waypointSetHint: 'Clic en el mapa para fijar Destino · Arrastra · Doble clic para marcador',
+      clearWaypoint: 'Limpiar',
+      distanceLabel: 'Dist',
       addMarkerBtn: 'Añadir marcador',
       tapMapHint: 'Toca en el mapa...',
       districtsLabel: 'Distritos:',
@@ -1057,6 +1089,14 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       dayMode: 'Tagmodus',
       nightMode: 'Nachtmodus',
       toggleDayNightAria: 'Zwischen Tag- und Nachtmodus der Karte wechseln',
+      mapModeAtlas: 'Atlas',
+      mapModeSatellite: 'Satellit',
+      mapModeNight: 'Heatmap / Nacht',
+      mapModeAria: 'Kartenansicht',
+      waypointLabel: 'Wegpunkt',
+      waypointSetHint: 'Klick für Wegpunkt · Ziehen zum Verschieben · Doppelklick für Marker',
+      clearWaypoint: 'Löschen',
+      distanceLabel: 'Entf',
       addMarkerBtn: 'Marker setzen',
       tapMapHint: 'Auf Karte tippen...',
       districtsLabel: 'Bezirke:',
@@ -1288,6 +1328,14 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       dayMode: 'Mode jour',
       nightMode: 'Mode nuit',
       toggleDayNightAria: 'Basculer entre le mode jour et nuit sur la carte',
+      mapModeAtlas: 'Atlas',
+      mapModeSatellite: 'Satellite',
+      mapModeNight: 'Thermique / Nuit',
+      mapModeAria: 'Mode de carte',
+      waypointLabel: 'Point de repère',
+      waypointSetHint: 'Clic sur la carte pour Waypoint · Glisser · Double-clic pour repère perso',
+      clearWaypoint: 'Effacer',
+      distanceLabel: 'Dist',
       addMarkerBtn: 'Ajouter repère',
       tapMapHint: 'Touchez la carte...',
       districtsLabel: 'Quartiers :',
@@ -1519,6 +1567,14 @@ const TRANSLATIONS: Record<Language, TranslationDictionary> = {
       dayMode: 'Modo dia',
       nightMode: 'Modo noite',
       toggleDayNightAria: 'Alternar entre modo dia e noite no mapa',
+      mapModeAtlas: 'Atlas',
+      mapModeSatellite: 'Satélite',
+      mapModeNight: 'Mapa de calor / Noite',
+      mapModeAria: 'Modo do mapa',
+      waypointLabel: 'Waypoint',
+      waypointSetHint: 'Clique no mapa para Waypoint · Arraste · Duplo clique para marcador',
+      clearWaypoint: 'Limpar',
+      distanceLabel: 'Dist',
       addMarkerBtn: 'Adicionar marcador',
       tapMapHint: 'Toque no mapa...',
       districtsLabel: 'Distritos:',
