@@ -10,6 +10,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useTranslation } from '../i18n/translations';
 import {
   CheatCategory,
   CheatCode,
@@ -45,18 +46,14 @@ function StatusIcon({ health }: { health: ServiceHealth }) {
   return <Wrench size={16} className="text-rose-400 shrink-0" />;
 }
 
-function statusLabel(health: ServiceHealth): string {
-  if (health === 'online') return 'Online';
-  if (health === 'degraded') return 'Begränsad';
-  return 'Underhåll';
-}
-
 export function GuidesCheatsTab({
   selectedConsole,
   cheats,
   radioStations,
   serverStatus,
 }: GuidesCheatsTabProps) {
+  const { t, localizeCheat, localizeRadio, localizeServerStatus } = useTranslation();
+
   const [subView, setSubView] = useState<'cheats' | 'radio'>('cheats');
   const [cheatSearch, setCheatSearch] = useState('');
   const [cheatCategory, setCheatCategory] = useState<'Alla' | CheatCategory>('Alla');
@@ -64,29 +61,45 @@ export function GuidesCheatsTab({
     radioStations[0]?.id ?? ''
   );
 
+  const localizedServerStatus = useMemo(
+    () => serverStatus.map((plat) => localizeServerStatus(plat)),
+    [serverStatus, localizeServerStatus]
+  );
+
+  const localizedCheats = useMemo(
+    () => cheats.map((c) => localizeCheat(c)),
+    [cheats, localizeCheat]
+  );
+
+  const localizedStations = useMemo(
+    () => radioStations.map((st) => localizeRadio(st)),
+    [radioStations, localizeRadio]
+  );
+
   const filteredCheats = useMemo(() => {
     const q = cheatSearch.trim().toLowerCase();
-    return cheats.filter((c) => {
+    return localizedCheats.filter((c) => {
       const matchesCat = cheatCategory === 'Alla' || c.category === cheatCategory;
       if (!q) return matchesCat;
-      const hay = `${c.name} ${c.effect} ${c.category} ${c.phoneNumber ?? ''}`.toLowerCase();
+      const catLabel = t.cheatCategories[c.category] ?? c.category;
+      const hay = `${c.name} ${c.effect} ${catLabel} ${c.phoneNumber ?? ''}`.toLowerCase();
       return matchesCat && hay.includes(q);
     });
-  }, [cheats, cheatCategory, cheatSearch]);
+  }, [localizedCheats, cheatCategory, cheatSearch, t.cheatCategories]);
 
   return (
     <section aria-labelledby="guides-heading" className="space-y-6">
       {/* Header */}
       <div>
         <p className="text-xs font-medium text-[#00F0FF] mb-1">
-          Knappikoner anpassade för:{' '}
-          {selectedConsole === 'ps5' ? 'PlayStation 5' : 'Xbox Series X|S'}
+          {t.guides.iconsAdaptedFor}:{' '}
+          {selectedConsole === 'ps5' ? 'PlayStation 5' : t.common.xbox}
         </p>
         <h1
           id="guides-heading"
           className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-white"
         >
-          Guider, Radio & Fuskkoder
+          {t.guides.title}
         </h1>
       </div>
 
@@ -96,16 +109,16 @@ export function GuidesCheatsTab({
           <div className="flex items-center gap-2.5">
             <Server size={18} className="text-[#00F0FF]" />
             <h2 className="font-display text-base font-bold text-white">
-              Rockstar Games Services · Serverstatus
+              {t.guides.serverHeading}
             </h2>
           </div>
           <span className="text-xs text-slate-400">
-            {serverStatus[0]?.updatedAt ?? 'Nyss uppdaterad'}
+            {localizedServerStatus[0]?.updatedAt ?? ''}
           </span>
         </div>
 
         <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-          {serverStatus.map((plat) => {
+          {localizedServerStatus.map((plat) => {
             const isActiveConsole = plat.platform === selectedConsole;
             return (
               <div
@@ -130,7 +143,7 @@ export function GuidesCheatsTab({
                     }`}
                   >
                     <StatusIcon health={plat.overall} />
-                    <span>{statusLabel(plat.overall)}</span>
+                    <span>{plat.overallLabel}</span>
                   </span>
                 </div>
 
@@ -158,7 +171,7 @@ export function GuidesCheatsTab({
       {/* Sub-navigation between Cheats & Radio */}
       <div
         role="tablist"
-        aria-label="Välj guideavdelning"
+        aria-label={t.guides.title}
         className="inline-flex items-center p-1 rounded-xl bg-[#141720] border border-white/10"
       >
         <button
@@ -172,7 +185,7 @@ export function GuidesCheatsTab({
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          Fuskkoder ({cheats.length})
+          {t.guides.tabCheats} ({localizedCheats.length})
         </button>
         <button
           type="button"
@@ -185,7 +198,7 @@ export function GuidesCheatsTab({
               : 'text-slate-400 hover:text-slate-200'
           }`}
         >
-          Radiostationer ({radioStations.length})
+          {t.guides.tabRadio} ({localizedStations.length})
         </button>
       </div>
 
@@ -207,7 +220,7 @@ export function GuidesCheatsTab({
                         : 'bg-[#141720] border-white/5 text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    {cat}
+                    {t.cheatCategories[cat]}
                   </button>
                 );
               })}
@@ -222,8 +235,8 @@ export function GuidesCheatsTab({
                 type="search"
                 value={cheatSearch}
                 onChange={(e) => setCheatSearch(e.target.value)}
-                placeholder="Sök fusk eller effekt..."
-                aria-label="Sök fuskkoder"
+                placeholder={t.guides.cheatSearchPlaceholder}
+                aria-label={t.guides.cheatSearchAria}
                 className="w-full min-h-[44px] pl-10 pr-4 py-2 rounded-xl bg-[#141720] border border-white/10 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-[#FF2A85]"
               />
             </div>
@@ -231,7 +244,7 @@ export function GuidesCheatsTab({
 
           {filteredCheats.length === 0 ? (
             <div className="leonida-surface rounded-2xl p-8 text-center text-sm text-slate-400">
-              Inga fuskkoder matchade din sökning.
+              {t.guides.noCheatsFound}
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -242,7 +255,9 @@ export function GuidesCheatsTab({
                 >
                   <div>
                     <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mb-1">
-                      <span className="text-[#FF2A85] font-medium">{cheat.category}</span>
+                      <span className="text-[#FF2A85] font-medium">
+                        {t.cheatCategories[cheat.category]}
+                      </span>
                       {cheat.phoneNumber && (
                         <>
                           <span aria-hidden="true">·</span>
@@ -262,7 +277,6 @@ export function GuidesCheatsTab({
                     </p>
                   </div>
 
-                  {/* Controller Sequence */}
                   <div className="pt-3 border-t border-white/[0.07]">
                     <div className="flex flex-wrap items-center gap-1.5">
                       {cheat.buttons.map((token, idx) => (
@@ -275,7 +289,7 @@ export function GuidesCheatsTab({
                     </div>
                     {cheat.disablesTrophies && (
                       <p className="text-[11px] text-slate-500 mt-2.5">
-                        Observera: Inaktiverar troféer/achievements under aktuell spelsession.
+                        {t.guides.trophyWarning}
                       </p>
                     )}
                   </div>
@@ -289,7 +303,7 @@ export function GuidesCheatsTab({
       {/* RADIO STATIONS SECTION */}
       {subView === 'radio' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {radioStations.map((station) => {
+          {localizedStations.map((station) => {
             const isExpanded = expandedStationId === station.id;
             return (
               <article
@@ -313,7 +327,7 @@ export function GuidesCheatsTab({
                         {station.name}
                       </h3>
                       <p className="text-xs text-slate-400 mt-0.5">
-                        Programledare: {station.host}
+                        {t.guides.hostLabel}: {station.host}
                       </p>
                     </div>
 
@@ -341,7 +355,9 @@ export function GuidesCheatsTab({
                   >
                     <span className="inline-flex items-center gap-2">
                       <Disc3 size={15} style={{ color: station.accentHex }} />
-                      <span>Låtlista ({station.tracks.length} spår)</span>
+                      <span>
+                        {t.guides.tracklistLabel} ({station.tracks.length} {t.guides.tracksUnit})
+                      </span>
                     </span>
                     <ChevronDown
                       size={16}

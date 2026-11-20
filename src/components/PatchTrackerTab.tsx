@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from '../i18n/translations';
 import { api } from '../services/api';
 import {
   subscribeToPatchNotifications,
@@ -39,6 +40,8 @@ export function PatchTrackerTab({
   selectedConsole,
   onAddPatch,
 }: PatchTrackerTabProps) {
+  const { t, localizePatch, localizeNewswireArticle } = useTranslation();
+
   const [platformFilter, setPlatformFilter] = useState<PatchPlatformFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -99,10 +102,23 @@ export function PatchTrackerTab({
     try {
       const result = await subscribeToPatchNotifications(selectedPushPlatform);
       setPushState(result.state);
-      setPushFeedback({ type: 'success', text: result.message });
+      const localizedText =
+        result.messageKey === 'webPush'
+          ? t.patches.pushWebPushActive
+          : result.messageKey === 'browserSaved'
+            ? t.patches.pushBrowserSaved
+            : t.patches.pushBrowserMissingVapid;
+      setPushFeedback({ type: 'success', text: localizedText });
     } catch (err: unknown) {
+      const code = err instanceof Error ? err.message : '';
       const message =
-        err instanceof Error ? err.message : 'Kunde inte aktivera pushnotiser.';
+        code === 'PUSH_UNSUPPORTED'
+          ? t.patches.pushUnsupported
+          : code === 'PUSH_PERMISSION_DENIED'
+            ? t.patches.pushPermissionDenied
+            : err instanceof Error && err.message
+              ? err.message
+              : t.patches.pushErrorDefault;
       setPushFeedback({ type: 'error', text: message });
     } finally {
       setIsPushBusy(false);
@@ -115,7 +131,7 @@ export function PatchTrackerTab({
     try {
       const next = await api.disablePushSubscription();
       setPushState(next);
-      setPushFeedback({ type: 'success', text: 'Pushbevakning pausad för denna enhet.' });
+      setPushFeedback({ type: 'success', text: t.patches.pushPausedMsg });
     } finally {
       setIsPushBusy(false);
     }
@@ -124,16 +140,41 @@ export function PatchTrackerTab({
   async function handleTestPush() {
     setPushFeedback(null);
     try {
-      await triggerTestPatchNotification(selectedPushPlatform);
-      setPushFeedback({ type: 'success', text: 'Testnotis skickad till din enhet.' });
+      const platformLabel =
+        selectedPushPlatform === 'both'
+          ? `${t.common.ps5} & ${t.common.xboxShort}`
+          : selectedPushPlatform === 'ps5'
+            ? t.common.ps5
+            : t.common.xbox;
+      await triggerTestPatchNotification(
+        `${t.patches.pushTestNotifTitle} ${platformLabel}`,
+        t.patches.pushTestNotifBody
+      );
+      setPushFeedback({ type: 'success', text: t.patches.pushTestSuccessMsg });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Kunde inte skicka testnotis.';
+      const code = err instanceof Error ? err.message : '';
+      const message =
+        code === 'PUSH_PERMISSION_REQUIRED'
+          ? t.patches.pushPermissionRequired
+          : err instanceof Error && err.message
+            ? err.message
+            : t.patches.pushTestErrorDefault;
       setPushFeedback({ type: 'error', text: message });
     }
   }
 
+  const localizedPatches = useMemo(
+    () => patches.map((patch) => localizePatch(patch)),
+    [patches, localizePatch]
+  );
+
+  const localizedArticles = useMemo(
+    () => newswireArticles.map((art) => localizeNewswireArticle(art)),
+    [newswireArticles, localizeNewswireArticle]
+  );
+
   const filteredPatches = useMemo(() => {
-    return patches.filter((patch) => {
+    return localizedPatches.filter((patch) => {
       const matchesPlatform =
         platformFilter === 'all' || patch.platforms.includes(platformFilter);
       const q = searchQuery.trim().toLowerCase();
@@ -149,7 +190,7 @@ export function PatchTrackerTab({
         .toLowerCase();
       return matchesPlatform && hay.includes(q);
     });
-  }, [patches, platformFilter, searchQuery]);
+  }, [localizedPatches, platformFilter, searchQuery]);
 
   async function handleSubmitPatch(e: FormEvent) {
     e.preventDefault();
@@ -160,7 +201,7 @@ export function PatchTrackerTab({
     if (includeXbox) platforms.push('xbox');
 
     if (!version.trim() || !title.trim() || platforms.length === 0) {
-      setFormError('Ange versionsnummer, rubrik och minst en konsolplattform.');
+      setFormError(t.patches.modalErrorMissing);
       return;
     }
 
@@ -182,11 +223,9 @@ export function PatchTrackerTab({
         platforms,
         fileSizePs5: includePs5 ? fileSizePs5.trim() || undefined : undefined,
         fileSizeXbox: includeXbox ? fileSizeXbox.trim() || undefined : undefined,
-        summary: summary.trim() || 'Ny uppdatering inlagd via adminverktyget.',
+        summary: summary.trim() || t.patches.defaultSummary,
         officialNotes:
-          officialNotes.length > 0
-            ? officialNotes
-            : ['Allmänna stabilitets- och prestandaförbättringar.'],
+          officialNotes.length > 0 ? officialNotes : [t.patches.defaultOfficialNote],
         communityDiscoveries,
       });
       setVersion('');
@@ -206,18 +245,16 @@ export function PatchTrackerTab({
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
           <p className="text-xs font-medium text-[#00F0FF] mb-1">
-            Aktiv konsol: {selectedConsole === 'ps5' ? 'PlayStation 5' : 'Xbox Series X|S'}
+            {t.patches.activeConsoleLabel}:{' '}
+            {selectedConsole === 'ps5' ? 'PlayStation 5' : t.common.xbox}
           </p>
           <h1
             id="patches-heading"
             className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-white text-balance"
           >
-            Uppdateringar & Patch Notes
+            {t.patches.title}
           </h1>
-          <p className="text-sm text-slate-400 mt-1 max-w-2xl">
-            Spåra officiella uppdateringar från Rockstar Games och dolda prestandaförändringar som
-            communityt upptäckt för PS5 och Xbox Series X|S.
-          </p>
+          <p className="text-sm text-slate-400 mt-1 max-w-2xl">{t.patches.subtitle}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5 shrink-0">
@@ -235,7 +272,7 @@ export function PatchTrackerTab({
           >
             <Bell size={17} />
             <span>
-              {pushState.enabled ? 'Push aktivt' : 'Bevaka uppdateringar (Push)'}
+              {pushState.enabled ? t.patches.pushActiveBtn : t.patches.watchPushBtn}
             </span>
           </button>
 
@@ -245,7 +282,7 @@ export function PatchTrackerTab({
             className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 py-2.5 rounded-xl bg-[#FF2A85] hover:bg-[#e52275] active:scale-[0.99] text-white text-sm font-semibold transition-all whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00F0FF]"
           >
             <Plus size={18} />
-            <span>Lägg till patch</span>
+            <span>{t.patches.addPatchBtn}</span>
           </button>
         </div>
       </div>
@@ -257,13 +294,13 @@ export function PatchTrackerTab({
             <Newspaper size={18} className="text-[#FF2A85] shrink-0" />
             <div className="min-w-0">
               <h2 className="font-display text-base sm:text-lg font-bold text-white truncate">
-                Rockstar Newswire & Nyheter
+                {t.patches.newswireTitle}
               </h2>
               <p className="text-xs text-slate-400">
-                Filtrerat RSS-flöde för Grand Theft Auto VI och Title Updates
-                {rssSource === 'fallback' && ' · Förhandsvisningsdata (RSS blockerad i sandbox)'}
-                {rssSource === 'cors-proxy' && ' · Live via RSS-proxy'}
-                {rssSource === 'edge-function' && ' · Live via Supabase Edge Function'}
+                {t.patches.newswireSubtitle}
+                {rssSource === 'fallback' && ` · ${t.patches.sourceFallback}`}
+                {rssSource === 'cors-proxy' && ` · ${t.patches.sourceProxy}`}
+                {rssSource === 'edge-function' && ` · ${t.patches.sourceEdge}`}
               </p>
             </div>
           </div>
@@ -275,15 +312,15 @@ export function PatchTrackerTab({
             className="inline-flex items-center gap-1.5 min-h-[40px] px-3 py-1.5 rounded-xl bg-[#0D0F14] border border-white/10 text-xs font-medium text-slate-300 hover:text-white hover:border-white/25 disabled:opacity-60 cursor-pointer shrink-0"
           >
             <RefreshCw size={14} className={isLoadingRss ? 'animate-spin' : ''} />
-            <span>{isLoadingRss ? 'Hämtar...' : 'Uppdatera RSS'}</span>
+            <span>{isLoadingRss ? t.patches.fetchingRss : t.patches.refreshRss}</span>
           </button>
         </div>
 
-        {isLoadingRss && newswireArticles.length === 0 ? (
-          <div className="py-6 text-sm text-slate-400">Hämtar senaste artiklarna från Rockstar...</div>
+        {isLoadingRss && localizedArticles.length === 0 ? (
+          <div className="py-6 text-sm text-slate-400">{t.patches.loadingRssText}</div>
         ) : (
           <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {newswireArticles.slice(0, 3).map((article) => (
+            {localizedArticles.slice(0, 3).map((article) => (
               <article
                 key={article.id}
                 className="flex flex-col justify-between p-4 rounded-xl bg-[#0D0F14]/75 border border-white/[0.07] hover:border-white/15 transition-colors"
@@ -310,7 +347,7 @@ export function PatchTrackerTab({
                   rel="noopener noreferrer"
                   className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[#FF2A85] hover:text-[#ff5ca1] transition-colors"
                 >
-                  <span>Läs på Rockstar Newswire</span>
+                  <span>{t.patches.readOnNewswire}</span>
                   <ExternalLink size={13} />
                 </a>
               </article>
@@ -323,14 +360,14 @@ export function PatchTrackerTab({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div
           role="tablist"
-          aria-label="Filtrera uppdateringar per plattform"
+          aria-label={t.common.selectConsoleAria}
           className="inline-flex items-center p-1 rounded-xl bg-[#141720] border border-white/10 self-start"
         >
           {(
             [
-              { id: 'all', label: 'Alla' },
-              { id: 'ps5', label: 'PS5' },
-              { id: 'xbox', label: 'Xbox Series X|S' },
+              { id: 'all', label: t.patches.filterAll },
+              { id: 'ps5', label: t.common.ps5 },
+              { id: 'xbox', label: t.common.xbox },
             ] as const
           ).map((tab) => {
             const active = platformFilter === tab.id;
@@ -342,9 +379,7 @@ export function PatchTrackerTab({
                 aria-selected={active}
                 onClick={() => setPlatformFilter(tab.id)}
                 className={`min-h-[38px] px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
-                  active
-                    ? 'bg-white/10 text-white'
-                    : 'text-slate-400 hover:text-slate-200'
+                  active ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
                 {tab.label}
@@ -362,8 +397,8 @@ export function PatchTrackerTab({
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Sök version eller ändring..."
-            aria-label="Sök bland uppdateringar"
+            placeholder={t.patches.searchPlaceholder}
+            aria-label={t.patches.searchAria}
             className="w-full min-h-[44px] pl-10 pr-4 py-2 rounded-xl bg-[#141720] border border-white/10 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-[#00F0FF]"
           />
         </div>
@@ -372,30 +407,25 @@ export function PatchTrackerTab({
       {/* Timeline List */}
       {filteredPatches.length === 0 ? (
         <div className="leonida-surface rounded-2xl p-8 text-center">
-          <p className="text-base font-medium text-slate-200">
-            Inga uppdateringar matchade ditt filter.
-          </p>
-          <p className="text-sm text-slate-400 mt-1">
-            Prova att rensa sökfältet eller växla till Alla plattformar.
-          </p>
+          <p className="text-base font-medium text-slate-200">{t.patches.emptyTitle}</p>
+          <p className="text-sm text-slate-400 mt-1">{t.patches.emptySubtitle}</p>
         </div>
       ) : (
         <div className="relative space-y-5">
           {filteredPatches.map((patch) => {
             const platformText = patch.platforms
-              .map((p) => (p === 'ps5' ? 'PS5' : 'Xbox Series X|S'))
+              .map((p) => (p === 'ps5' ? t.common.ps5 : t.common.xbox))
               .join(' / ');
 
             const sizeParts: string[] = [];
-            if (patch.fileSizePs5) sizeParts.push(`PS5: ${patch.fileSizePs5}`);
-            if (patch.fileSizeXbox) sizeParts.push(`Xbox: ${patch.fileSizeXbox}`);
+            if (patch.fileSizePs5) sizeParts.push(`${t.common.ps5}: ${patch.fileSizePs5}`);
+            if (patch.fileSizeXbox) sizeParts.push(`${t.common.xboxShort}: ${patch.fileSizeXbox}`);
 
             return (
               <article
                 key={patch.id}
                 className="leonida-glass rounded-2xl p-5 sm:p-6 transition-colors hover:border-white/15"
               >
-                {/* Unboxed Metadata Row */}
                 <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-slate-400 mb-2">
                   <span className="font-mono tabular-nums font-semibold text-[#00F0FF]">
                     v{patch.version}
@@ -417,7 +447,7 @@ export function PatchTrackerTab({
                   {patch.isHotfix && (
                     <>
                       <span aria-hidden="true">·</span>
-                      <span className="text-[#FF2A85] font-medium">Hotfix</span>
+                      <span className="text-[#FF2A85] font-medium">{t.patches.hotfixLabel}</span>
                     </>
                   )}
                 </div>
@@ -429,12 +459,11 @@ export function PatchTrackerTab({
                   {patch.summary}
                 </p>
 
-                {/* Two-column split on desktop for Official vs Community Discoveries */}
                 <div className="mt-5 pt-5 border-t border-white/[0.08] grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <div>
                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-200 mb-3">
                       <ShieldCheck size={15} className="text-[#00F0FF] shrink-0" />
-                      <span>Officiella patch notes (Rockstar Games)</span>
+                      <span>{t.patches.officialNotesHeading}</span>
                     </div>
                     <ul className="space-y-2 text-sm text-slate-300 leading-relaxed">
                       {patch.officialNotes.map((note, idx) => (
@@ -452,12 +481,10 @@ export function PatchTrackerTab({
                   <div className="pt-4 lg:pt-0 border-t lg:border-t-0 lg:border-l border-white/[0.08] lg:pl-6">
                     <div className="flex items-center gap-2 text-xs font-semibold text-[#FF2A85] mb-3">
                       <Eye size={15} className="shrink-0" />
-                      <span>Community & Stealth-upptäckter</span>
+                      <span>{t.patches.communityHeading}</span>
                     </div>
                     {patch.communityDiscoveries.length === 0 ? (
-                      <p className="text-sm text-slate-500">
-                        Inga dolda ändringar rapporterade ännu för denna version.
-                      </p>
+                      <p className="text-sm text-slate-500">{t.patches.communityEmpty}</p>
                     ) : (
                       <ul className="space-y-2 text-sm text-slate-300 leading-relaxed">
                         {patch.communityDiscoveries.map((disc, idx) => (
@@ -490,20 +517,15 @@ export function PatchTrackerTab({
           <div className="w-full sm:max-w-xl max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl bg-[#141720] border border-white/15 p-5 sm:p-6">
             <div className="flex items-center justify-between gap-4 pb-4 border-b border-white/10">
               <div>
-                <h2
-                  id="add-patch-modal-title"
-                  className="font-display text-lg font-bold text-white"
-                >
-                  Lägg till ny patch note
+                <h2 id="add-patch-modal-title" className="font-display text-lg font-bold text-white">
+                  {t.patches.modalTitle}
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Sparas lokalt nu och är förberedd för Supabase-tabellen <span className="font-mono">patches</span>.
-                </p>
+                <p className="text-xs text-slate-400 mt-0.5">{t.patches.modalSubtitle}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                aria-label="Stäng modal"
+                aria-label={t.common.close}
                 className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-white/5 cursor-pointer"
               >
                 <X size={20} />
@@ -520,20 +542,20 @@ export function PatchTrackerTab({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                    Versionsnummer *
+                    {t.patches.fieldVersion}
                   </label>
                   <input
                     type="text"
                     required
                     value={version}
                     onChange={(e) => setVersion(e.target.value)}
-                    placeholder="t.ex. 01.004.002"
+                    placeholder={t.patches.fieldVersionPlaceholder}
                     className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[#0D0F14] border border-white/10 text-sm font-mono text-white focus:outline-none focus:border-[#00F0FF]"
                   />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                    Släppdatum
+                    {t.patches.fieldDate}
                   </label>
                   <input
                     type="date"
@@ -546,14 +568,14 @@ export function PatchTrackerTab({
 
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Rubrik *
+                  {t.patches.fieldTitle}
                 </label>
                 <input
                   type="text"
                   required
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="t.ex. Vice Port Nätverks- & Prestandapatch"
+                  placeholder={t.patches.fieldTitlePlaceholder}
                   className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[#0D0F14] border border-white/10 text-sm text-white focus:outline-none focus:border-[#00F0FF]"
                 />
               </div>
@@ -574,7 +596,7 @@ export function PatchTrackerTab({
                       type="text"
                       value={fileSizePs5}
                       onChange={(e) => setFileSizePs5(e.target.value)}
-                      placeholder="Filstorlek (t.ex. 2.10 GB)"
+                      placeholder={t.patches.fieldSizePlaceholder}
                       className="w-full min-h-[38px] px-3 py-1.5 rounded-lg bg-[#141720] border border-white/10 text-xs font-mono text-slate-200 focus:outline-none focus:border-[#00F0FF]"
                     />
                   )}
@@ -588,14 +610,14 @@ export function PatchTrackerTab({
                       onChange={(e) => setIncludeXbox(e.target.checked)}
                       className="w-4 h-4 accent-[#FF2A85]"
                     />
-                    <span>Xbox Series X|S</span>
+                    <span>{t.common.xbox}</span>
                   </label>
                   {includeXbox && (
                     <input
                       type="text"
                       value={fileSizeXbox}
                       onChange={(e) => setFileSizeXbox(e.target.value)}
-                      placeholder="Filstorlek (t.ex. 2.35 GB)"
+                      placeholder={t.patches.fieldSizePlaceholder}
                       className="w-full min-h-[38px] px-3 py-1.5 rounded-lg bg-[#141720] border border-white/10 text-xs font-mono text-slate-200 focus:outline-none focus:border-[#FF2A85]"
                     />
                   )}
@@ -604,39 +626,39 @@ export function PatchTrackerTab({
 
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Sammanfattning
+                  {t.patches.fieldSummary}
                 </label>
                 <input
                   type="text"
                   value={summary}
                   onChange={(e) => setSummary(e.target.value)}
-                  placeholder="Kort överblick av vad patchen fokuserar på..."
+                  placeholder={t.patches.fieldSummaryPlaceholder}
                   className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[#0D0F14] border border-white/10 text-sm text-white focus:outline-none focus:border-[#00F0FF]"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Officiella patch notes (en punkt per rad)
+                  {t.patches.fieldOfficialNotes}
                 </label>
                 <textarea
                   rows={3}
                   value={officialNotesRaw}
                   onChange={(e) => setOfficialNotesRaw(e.target.value)}
-                  placeholder="Förbättrad bildfrekvens i Downtown Vice City&#10;Åtgärdat krasch vid byte av radio..."
+                  placeholder={t.patches.fieldOfficialNotesPlaceholder}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#0D0F14] border border-white/10 text-sm text-white focus:outline-none focus:border-[#00F0FF]"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Community & Stealth-upptäckter (en punkt per rad)
+                  {t.patches.fieldCommunityNotes}
                 </label>
                 <textarea
                   rows={2}
                   value={communityRaw}
                   onChange={(e) => setCommunityRaw(e.target.value)}
-                  placeholder="Tyst ökning av vattenspray-effekter bakom racerbåtar..."
+                  placeholder={t.patches.fieldCommunityNotesPlaceholder}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#0D0F14] border border-white/10 text-sm text-white focus:outline-none focus:border-[#FF2A85]"
                 />
               </div>
@@ -647,14 +669,14 @@ export function PatchTrackerTab({
                   onClick={() => setIsModalOpen(false)}
                   className="min-h-[44px] px-4 py-2 rounded-xl border border-white/10 text-sm font-medium text-slate-300 hover:bg-white/5 cursor-pointer"
                 >
-                  Avbryt
+                  {t.common.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
                   className="min-h-[44px] px-5 py-2 rounded-xl bg-[#FF2A85] hover:bg-[#e52275] disabled:opacity-60 text-sm font-semibold text-white cursor-pointer"
                 >
-                  {isSubmitting ? 'Sparar...' : 'Publicera patch note'}
+                  {isSubmitting ? t.common.saving : t.patches.submitPatch}
                 </button>
               </div>
             </form>
@@ -674,16 +696,14 @@ export function PatchTrackerTab({
             <div className="flex items-center justify-between gap-4 pb-3 border-b border-white/10">
               <div>
                 <h2 id="push-modal-title" className="font-display text-lg font-bold text-white">
-                  Bevaka uppdateringar (Push)
+                  {t.patches.pushModalTitle}
                 </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Få en notis direkt när en ny GTA VI-patch läggs in i Supabase.
-                </p>
+                <p className="text-xs text-slate-400 mt-0.5">{t.patches.pushModalSubtitle}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setIsPushModalOpen(false)}
-                aria-label="Stäng notisinställningar"
+                aria-label={t.common.close}
                 className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white hover:bg-white/5 cursor-pointer"
               >
                 <X size={20} />
@@ -692,14 +712,14 @@ export function PatchTrackerTab({
 
             <div className="space-y-2">
               <p className="text-xs font-medium text-slate-300">
-                Välj plattform att bevaka:
+                {t.patches.pushSelectPlatform}
               </p>
               <div className="grid grid-cols-3 gap-2">
                 {(
                   [
-                    { id: 'ps5', label: 'PS5' },
-                    { id: 'xbox', label: 'Xbox' },
-                    { id: 'both', label: 'Båda' },
+                    { id: 'ps5', label: t.common.ps5 },
+                    { id: 'xbox', label: t.common.xboxShort },
+                    { id: 'both', label: t.common.both },
                   ] as const
                 ).map((opt) => {
                   const active = selectedPushPlatform === opt.id;
@@ -723,15 +743,15 @@ export function PatchTrackerTab({
 
             <div className="p-3 rounded-xl bg-[#0D0F14] border border-white/[0.08] text-xs text-slate-400 space-y-1">
               <div className="flex items-center justify-between">
-                <span>Enhets-ID (anonym synk):</span>
+                <span>{t.patches.pushDeviceId}</span>
                 <span className="font-mono text-slate-300">
                   {api.getDeviceId().slice(0, 8)}...
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span>Molnsynk (Supabase):</span>
+                <span>{t.patches.pushCloudSync}</span>
                 <span className={api.isCloudSyncEnabled() ? 'text-emerald-400' : 'text-amber-400'}>
-                  {api.isCloudSyncEnabled() ? 'Ansluten' : 'Offline-läge (localStorage)'}
+                  {api.isCloudSyncEnabled() ? t.patches.pushConnected : t.patches.pushOffline}
                 </span>
               </div>
             </div>
@@ -761,10 +781,10 @@ export function PatchTrackerTab({
                 <Bell size={16} />
                 <span>
                   {isPushBusy
-                    ? 'Aktiverar...'
+                    ? t.patches.pushActivating
                     : pushState.enabled
-                      ? 'Uppdatera plattformsval'
-                      : 'Aktivera pushnotiser'}
+                      ? t.patches.pushUpdateBtn
+                      : t.patches.pushActivateBtn}
                 </span>
               </button>
 
@@ -775,7 +795,7 @@ export function PatchTrackerTab({
                     onClick={handleTestPush}
                     className="min-h-[42px] px-3 py-2 rounded-xl bg-[#0D0F14] border border-white/15 text-xs font-medium text-slate-200 hover:bg-white/5 cursor-pointer"
                   >
-                    Testa notis
+                    {t.patches.pushTestBtn}
                   </button>
                   <button
                     type="button"
@@ -784,7 +804,7 @@ export function PatchTrackerTab({
                     className="min-h-[42px] px-3 py-2 rounded-xl bg-[#0D0F14] border border-white/10 text-xs font-medium text-slate-400 hover:text-rose-300 flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <BellOff size={14} />
-                    <span>Stäng av</span>
+                    <span>{t.patches.pushDisableBtn}</span>
                   </button>
                 </div>
               )}

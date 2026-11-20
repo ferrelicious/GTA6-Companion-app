@@ -1,4 +1,5 @@
 import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp } from 'lucide-react';
+import { useTranslation } from '../i18n/translations';
 import { CheatButtonToken, ConsolePlatform } from '../types';
 
 interface ControllerButtonProps {
@@ -7,6 +8,8 @@ interface ControllerButtonProps {
 }
 
 export function ControllerButton({ token, platform }: ControllerButtonProps) {
+  const { t } = useTranslation();
+
   if (token === 'UP' || token === 'DOWN' || token === 'LEFT' || token === 'RIGHT') {
     const ArrowIcon =
       token === 'UP'
@@ -17,7 +20,13 @@ export function ControllerButton({ token, platform }: ControllerButtonProps) {
             ? ArrowLeft
             : ArrowRight;
     const label =
-      token === 'UP' ? 'Upp' : token === 'DOWN' ? 'Ner' : token === 'LEFT' ? 'Vänster' : 'Höger';
+      token === 'UP'
+        ? t.guides.dpad.up
+        : token === 'DOWN'
+          ? t.guides.dpad.down
+          : token === 'LEFT'
+            ? t.guides.dpad.left
+            : t.guides.dpad.right;
 
     return (
       <span
@@ -47,8 +56,8 @@ export function ControllerButton({ token, platform }: ControllerButtonProps) {
     if (token === 'TRIANGLE_Y') {
       return (
         <span
-          title="Triangel"
-          aria-label="Triangel"
+          title={t.guides.psButtons.triangle}
+          aria-label={t.guides.psButtons.triangle}
           className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#0D0F14] border border-emerald-400/40 shrink-0"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -60,8 +69,8 @@ export function ControllerButton({ token, platform }: ControllerButtonProps) {
     if (token === 'CIRCLE_B') {
       return (
         <span
-          title="Cirkel"
-          aria-label="Cirkel"
+          title={t.guides.psButtons.circle}
+          aria-label={t.guides.psButtons.circle}
           className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#0D0F14] border border-rose-400/40 shrink-0"
         >
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -73,8 +82,8 @@ export function ControllerButton({ token, platform }: ControllerButtonProps) {
     if (token === 'CROSS_A') {
       return (
         <span
-          title="Kryss (X)"
-          aria-label="Kryss"
+          title={t.guides.psButtons.cross}
+          aria-label={t.guides.psButtons.cross}
           className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#0D0F14] border border-sky-400/40 shrink-0"
         >
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -83,11 +92,10 @@ export function ControllerButton({ token, platform }: ControllerButtonProps) {
         </span>
       );
     }
-    // SQUARE_X
     return (
       <span
-        title="Fyrkant"
-        aria-label="Fyrkant"
+        title={t.guides.psButtons.square}
+        aria-label={t.guides.psButtons.square}
         className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#0D0F14] border border-pink-400/40 shrink-0"
       >
         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -97,7 +105,6 @@ export function ControllerButton({ token, platform }: ControllerButtonProps) {
     );
   }
 
-  // Xbox face buttons (Y, B, A, X)
   const xboxMap: Record<'TRIANGLE_Y' | 'CIRCLE_B' | 'CROSS_A' | 'SQUARE_X', { label: string; colorClass: string }> = {
     TRIANGLE_Y: { label: 'Y', colorClass: 'text-amber-400 border-amber-400/40' },
     CIRCLE_B: { label: 'B', colorClass: 'text-rose-400 border-rose-400/40' },

@@ -5,6 +5,7 @@ import { GuidesCheatsTab } from './components/GuidesCheatsTab';
 import { LeonidaMapTab } from './components/LeonidaMapTab';
 import { PatchTrackerTab } from './components/PatchTrackerTab';
 import { TopBar } from './components/TopBar';
+import { LanguageProvider, useTranslation } from './i18n/translations';
 import { api } from './services/api';
 import {
   CheatCode,
@@ -19,7 +20,8 @@ import {
   RadioStation,
 } from './types';
 
-export default function App() {
+function CompanionShell() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<MainTab>('patches');
   const [selectedConsole, setSelectedConsole] = useState<ConsolePlatform>(() =>
     api.getSelectedConsole()
@@ -139,12 +141,14 @@ export default function App() {
       <TopBar
         selectedConsole={selectedConsole}
         onSelectConsole={handleSelectConsole}
+        serverStatus={serverStatus}
+        onOpenServerStatus={() => setActiveTab('guides')}
       />
 
       <main className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 pt-6 pb-28">
         {isLoading ? (
           <div className="leonida-surface rounded-2xl p-8 text-center text-sm text-slate-400">
-            Laddar Leonida Companion...
+            {t.common.loading}
           </div>
         ) : (
           <>
@@ -190,5 +194,13 @@ export default function App() {
 
       <BottomNav activeTab={activeTab} onSelectTab={setActiveTab} />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <CompanionShell />
+    </LanguageProvider>
   );
 }

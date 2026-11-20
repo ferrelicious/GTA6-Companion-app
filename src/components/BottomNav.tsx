@@ -1,4 +1,5 @@
 import { CheckSquare, Gamepad2, Map as MapIcon, Newspaper } from 'lucide-react';
+import { useTranslation } from '../i18n/translations';
 import { MainTab } from '../types';
 
 interface BottomNavProps {
@@ -6,21 +7,23 @@ interface BottomNavProps {
   onSelectTab: (tab: MainTab) => void;
 }
 
-const NAV_ITEMS: { id: MainTab; label: string; icon: typeof Newspaper }[] = [
-  { id: 'patches', label: 'Uppdateringar', icon: Newspaper },
-  { id: 'map', label: 'Karta', icon: MapIcon },
-  { id: 'checklist', label: 'Checklista', icon: CheckSquare },
-  { id: 'guides', label: 'Guider & Fusk', icon: Gamepad2 },
-];
-
 export function BottomNav({ activeTab, onSelectTab }: BottomNavProps) {
+  const { t } = useTranslation();
+
+  const navItems: { id: MainTab; label: string; icon: typeof Newspaper }[] = [
+    { id: 'patches', label: t.nav.patches, icon: Newspaper },
+    { id: 'map', label: t.nav.map, icon: MapIcon },
+    { id: 'checklist', label: t.nav.checklist, icon: CheckSquare },
+    { id: 'guides', label: t.nav.guides, icon: Gamepad2 },
+  ];
+
   return (
     <nav
-      aria-label="Huvudnavigering"
+      aria-label={t.nav.ariaLabel}
       className="fixed bottom-0 left-0 right-0 z-40 leonida-glass border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
     >
       <div className="max-w-3xl mx-auto grid grid-cols-4 h-16">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           return (

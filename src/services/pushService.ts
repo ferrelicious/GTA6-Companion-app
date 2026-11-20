@@ -12,10 +12,12 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+export type PushMessageKey = 'webPush' | 'browserSaved' | 'browserLocalMissingVapid';
+
 export interface PushActivationResult {
   state: PushSubscriptionState;
   mode: 'web-push' | 'browser-local';
-  message: string;
+  messageKey: PushMessageKey;
 }
 
 export function isNotificationSupported(): boolean {
@@ -39,14 +41,12 @@ export async function subscribeToPatchNotifications(
   platform: PushPlatformChoice
 ): Promise<PushActivationResult> {
   if (!isNotificationSupported()) {
-    throw new Error('Din webbläsare stöder tyvärr inte Push-notiser.');
+    throw new Error('PUSH_UNSUPPORTED');
   }
 
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') {
-    throw new Error(
-      'Notisbehörighet nekades. Tillåt notiser i webbläsarens sidinställningar för att bevaka uppdateringar.'
-    );
+    throw new Error('PUSH_PERMISSION_DENIED');
   }
 
   const registration = await registerPushServiceWorker();
@@ -67,39 +67,34 @@ export async function subscribeToPatchNotifications(
       return {
         state: saved,
         mode: 'web-push',
-        message: 'Web Push aktiverat och synkat till Supabase.',
+        messageKey: 'webPush',
       };
     } catch (err) {
-      console.warn('PushManager.subscribe misslyckades, använder lokal SW-prenumeration:', err);
+      console.warn('PushManager.subscribe failed, falling back to local SW notification:', err);
     }
   }
 
-  // Fallback när VITE_WEB_PUSH_PUBLIC_KEY ännu inte satts i .env
   const fallbackPayload = {
     endpoint: `browser-notification://${api.getDeviceId()}`,
     keys: {},
-    note: 'Lägg till VITE_WEB_PUSH_PUBLIC_KEY för bakgrunds-push när fliken är stängd.',
+    note: 'Add VITE_WEB_PUSH_PUBLIC_KEY for background push when tab is closed.',
   };
   const saved = await api.savePushSubscription(platform, fallbackPayload);
 
   return {
     state: saved,
     mode: 'browser-local',
-    message: vapidPublicKey
-      ? 'Prenumeration sparad med webbläsarnotiser.'
-      : 'Notiser aktiverade och sparade! Lägg till VITE_WEB_PUSH_PUBLIC_KEY för bakgrunds-push när appen är stängd.',
+    messageKey: vapidPublicKey ? 'browserSaved' : 'browserLocalMissingVapid',
   };
 }
 
-export async function triggerTestPatchNotification(platform: PushPlatformChoice): Promise<void> {
+export async function triggerTestPatchNotification(
+  title: string,
+  body: string
+): Promise<void> {
   if (!isNotificationSupported() || Notification.permission !== 'granted') {
-    throw new Error('Aktivera notisbehörighet först.');
+    throw new Error('PUSH_PERMISSION_REQUIRED');
   }
-
-  const platformLabel =
-    platform === 'both' ? 'PS5 & Xbox' : platform === 'ps5' ? 'PS5' : 'Xbox Series X|S';
-  const title = `GTA VI · Ny patch för ${platformLabel}`;
-  const body = 'Testnotis: Version 01.004.001 finns nu i Leonida Companion.';
 
   const registration = await registerPushServiceWorker();
   if (registration && 'showNotification' in registration) {

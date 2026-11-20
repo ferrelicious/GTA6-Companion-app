@@ -26,6 +26,7 @@ import {
   useState,
   WheelEvent as ReactWheelEvent,
 } from 'react';
+import { useTranslation } from '../i18n/translations';
 import { MapMarker, MarkerCategory } from '../types';
 import { LeonidaSvgMap } from './LeonidaSvgMap';
 
@@ -77,6 +78,8 @@ export function LeonidaMapTab({
   onAddCustomMarker,
   onDeleteCustomMarker,
 }: LeonidaMapTabProps) {
+  const { t, localizeMarker } = useTranslation();
+
   const [activeCategories, setActiveCategories] = useState<Set<MarkerCategory>>(
     () => new Set(ALL_CATEGORIES.map((c) => c.id))
   );
@@ -92,7 +95,6 @@ export function LeonidaMapTab({
   const stageRef = useRef<HTMLDivElement>(null);
   const minimapRef = useRef<HTMLDivElement>(null);
 
-  // Multi-touch & pointer tracking for mouse pan + touch pinch-zoom
   const activePointers = useRef<Map<number, { x: number; y: number }>>(new Map());
   const gestureRef = useRef<{
     mode: 'none' | 'pan' | 'pinch';
@@ -128,17 +130,22 @@ export function LeonidaMapTab({
 
   const foundSet = useMemo(() => new Set(foundMarkerIds), [foundMarkerIds]);
 
+  const localizedMarkers = useMemo(
+    () => markers.map((m) => localizeMarker(m)),
+    [markers, localizeMarker]
+  );
+
   const visibleMarkers = useMemo(() => {
-    return markers.filter((m) => {
+    return localizedMarkers.filter((m) => {
       if (!activeCategories.has(m.category)) return false;
       if (hideFound && foundSet.has(m.id)) return false;
       return true;
     });
-  }, [markers, activeCategories, hideFound, foundSet]);
+  }, [localizedMarkers, activeCategories, hideFound, foundSet]);
 
   const selectedMarker = useMemo(
-    () => markers.find((m) => m.id === selectedMarkerId) ?? null,
-    [markers, selectedMarkerId]
+    () => localizedMarkers.find((m) => m.id === selectedMarkerId) ?? null,
+    [localizedMarkers, selectedMarkerId]
   );
 
   const clampZoom = useCallback((nextZoom: number) => {
@@ -157,7 +164,6 @@ export function LeonidaMapTab({
     setPan({ x: centeredX, y: centeredY });
   }, [clampZoom]);
 
-  // Fit entire Leonida map cleanly on initial mount & observe viewport size changes
   useEffect(() => {
     resetView();
     const vp = viewportRef.current;
@@ -378,9 +384,8 @@ export function LeonidaMapTab({
       const created = await onAddCustomMarker({
         title: draftTitle.trim(),
         category: draftCategory,
-        region: 'Egen platsmarkering',
-        description:
-          draftDesc.trim() || 'Personlig markör tillagd på Leonida-kartan.',
+        region: t.map.customRegion,
+        description: draftDesc.trim() || t.map.customDefaultDesc,
         x: draftCoords.x,
         y: draftCoords.y,
       });
@@ -392,7 +397,6 @@ export function LeonidaMapTab({
     }
   }
 
-  // Minimap viewport indicator rect (percentage of 0-100)
   const minimapRect = useMemo(() => {
     const scaledW = STAGE_WIDTH * zoom;
     const scaledH = STAGE_HEIGHT * zoom;
@@ -416,13 +420,13 @@ export function LeonidaMapTab({
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <p className="text-xs font-medium text-[#00F0FF] mb-1 font-mono tabular-nums">
-            {foundCount} / {markers.length} platser hittade
+            {foundCount} / {markers.length} {t.map.foundCounter}
           </p>
           <h1
             id="map-heading"
             className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-white"
           >
-            Interaktiv Karta: Leonida & Vice City
+            {t.map.title}
           </h1>
         </div>
 
@@ -438,7 +442,7 @@ export function LeonidaMapTab({
             }`}
           >
             <EyeOff size={14} />
-            <span>{hideFound ? 'Visar endast ohittade' : 'Dölj hittade'}</span>
+            <span>{hideFound ? t.map.showingUnfound : t.map.hideFound}</span>
           </button>
 
           <button
@@ -452,7 +456,7 @@ export function LeonidaMapTab({
             }`}
           >
             <MapPin size={14} />
-            <span>{isPlaceMode ? 'Tryck på kartan...' : 'Lägg till markör'}</span>
+            <span>{isPlaceMode ? t.map.tapMapHint : t.map.addMarkerBtn}</span>
           </button>
         </div>
       </div>
@@ -460,7 +464,7 @@ export function LeonidaMapTab({
       {/* Layer / Category Filter Chips */}
       <div
         role="group"
-        aria-label="Kartlager"
+        aria-label={t.map.fieldCategory}
         className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1"
       >
         {ALL_CATEGORIES.map((cat) => {
@@ -480,7 +484,7 @@ export function LeonidaMapTab({
               }`}
             >
               <Icon size={14} style={{ color: active ? cat.color : '#64748B' }} />
-              <span>{cat.id}</span>
+              <span>{t.markerCategories[cat.id]}</span>
               <span className="font-mono tabular-nums text-[11px] text-slate-400">
                 {count}
               </span>
@@ -491,19 +495,19 @@ export function LeonidaMapTab({
 
       {/* Quick District Navigation */}
       <div
-        aria-label="Snabbhopp till distrikt"
+        aria-label={t.map.districtsLabel}
         className="flex items-center gap-1.5 overflow-x-auto no-scrollbar"
       >
         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 mr-1 shrink-0">
           <Compass size={13} className="text-[#00F0FF]" />
-          <span>Distrikt:</span>
+          <span>{t.map.districtsLabel}</span>
         </span>
         <button
           type="button"
           onClick={resetView}
           className="min-h-[32px] px-2.5 py-1 rounded-lg bg-[#141720] border border-white/10 text-[11px] font-medium text-slate-300 hover:text-white hover:border-white/25 whitespace-nowrap shrink-0 cursor-pointer"
         >
-          Hela Leonida
+          {t.map.allLeonida}
         </button>
         {DISTRICT_PRESETS.map((dist) => (
           <button
@@ -531,7 +535,6 @@ export function LeonidaMapTab({
             isPlaceMode ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'
           }`}
         >
-          {/* Transformed SVG Stage */}
           <div
             ref={stageRef}
             style={{
@@ -544,7 +547,6 @@ export function LeonidaMapTab({
           >
             <LeonidaSvgMap zoom={zoom} />
 
-            {/* Interactive Markers */}
             {visibleMarkers.map((marker) => {
               const meta = CATEGORY_META[marker.category] ?? CATEGORY_META['Egna markörer'];
               const Icon = meta.icon;
@@ -560,7 +562,9 @@ export function LeonidaMapTab({
                     e.stopPropagation();
                     setSelectedMarkerId(marker.id);
                   }}
-                  aria-label={`${marker.title} (${marker.category})${isFound ? ' - Hittad' : ''}`}
+                  aria-label={`${marker.title} (${t.markerCategories[marker.category]})${
+                    isFound ? ` - ${t.map.foundSuffix}` : ''
+                  }`}
                   style={{
                     left: `${marker.x}%`,
                     top: `${marker.y}%`,
@@ -590,7 +594,7 @@ export function LeonidaMapTab({
           </div>
         </div>
 
-        {/* Interaktiv Minimap (övre högra hörnet) */}
+        {/* Interaktiv Minimap */}
         <div
           ref={minimapRef}
           onPointerDown={(e) => {
@@ -602,12 +606,11 @@ export function LeonidaMapTab({
               handleMinimapNavigate(e);
             }
           }}
-          title="Klicka eller dra i minimapen för att flytta vyn"
+          title={t.map.minimapTitle}
           className="absolute top-3 right-3 z-20 w-32 sm:w-44 aspect-[4/3] rounded-xl overflow-hidden bg-[#080C14]/95 border border-white/20 shadow-xl cursor-crosshair select-none"
         >
           <LeonidaSvgMap zoom={1} isMinimap />
 
-          {/* Små punkter på minimapen för aktiva markörer */}
           <div className="absolute inset-0 pointer-events-none">
             {visibleMarkers.map((m) => {
               const meta = CATEGORY_META[m.category] ?? CATEGORY_META['Egna markörer'];
@@ -627,24 +630,23 @@ export function LeonidaMapTab({
             })}
           </div>
 
-          {/* Synlig vy-rektangel */}
           <div
             style={minimapRect}
             className="absolute border border-[#00F0FF] bg-[#00F0FF]/15 pointer-events-none"
           />
         </div>
 
-        {/* Kartkontroller (Zoom +/-, Återställ vy & hjälptext) */}
+        {/* Map Controls */}
         <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between pointer-events-none">
           <div className="pointer-events-auto px-3 py-1.5 rounded-xl leonida-glass text-[11px] text-slate-300 hidden md:block">
-            Dra för att panorera · Scrolla eller nyp för gatunivå-zoom · Dubbelklicka för egen markör
+            {t.map.controlsHint}
           </div>
 
           <div className="pointer-events-auto flex items-center gap-1.5 ml-auto">
             <button
               type="button"
               onClick={() => zoomAroundPoint(zoom * 0.72)}
-              aria-label="Zooma ut"
+              aria-label={t.map.zoomOutAria}
               className="w-10 h-10 rounded-xl leonida-glass flex items-center justify-center text-slate-200 hover:text-white cursor-pointer"
             >
               <Minus size={16} />
@@ -655,7 +657,7 @@ export function LeonidaMapTab({
             <button
               type="button"
               onClick={() => zoomAroundPoint(zoom * 1.38)}
-              aria-label="Zooma in"
+              aria-label={t.map.zoomInAria}
               className="w-10 h-10 rounded-xl leonida-glass flex items-center justify-center text-slate-200 hover:text-white cursor-pointer"
             >
               <Plus size={16} />
@@ -663,12 +665,12 @@ export function LeonidaMapTab({
             <button
               type="button"
               onClick={resetView}
-              aria-label="Återställ vy"
-              title="Återställ vy"
+              aria-label={t.map.resetView}
+              title={t.map.resetView}
               className="h-10 px-3 rounded-xl leonida-glass inline-flex items-center gap-1.5 text-xs font-medium text-slate-200 hover:text-white cursor-pointer"
             >
               <RotateCcw size={14} />
-              <span className="hidden sm:inline">Återställ vy</span>
+              <span className="hidden sm:inline">{t.map.resetView}</span>
             </button>
           </div>
         </div>
@@ -687,10 +689,8 @@ export function LeonidaMapTab({
             onClick={(e) => e.stopPropagation()}
             className="w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl bg-[#141720] border border-white/15 overflow-hidden shadow-2xl"
           >
-            {/* Mobile drag handle */}
             <div className="sm:hidden w-10 h-1.5 bg-slate-600 rounded-full mx-auto my-2.5" />
 
-            {/* Location Image / Placeholder */}
             <div className="relative h-44 w-full bg-[#0D0F14] overflow-hidden">
               {selectedMarker.imageUrl && !failedImageIds.has(selectedMarker.id) ? (
                 <img
@@ -712,7 +712,7 @@ export function LeonidaMapTab({
               <button
                 type="button"
                 onClick={() => setSelectedMarkerId(null)}
-                aria-label="Stäng markördetaljer"
+                aria-label={t.map.closeDetailAria}
                 className="absolute top-3 right-3 w-10 h-10 rounded-full bg-black/60 backdrop-blur-md text-white flex items-center justify-center hover:bg-black/80 cursor-pointer"
               >
                 <X size={18} />
@@ -729,7 +729,7 @@ export function LeonidaMapTab({
                         CATEGORY_META[selectedMarker.category]?.color ?? '#00F0FF',
                     }}
                   >
-                    {selectedMarker.category}
+                    {t.markerCategories[selectedMarker.category]}
                   </span>
                   <span aria-hidden="true">·</span>
                   <span>{selectedMarker.region}</span>
@@ -749,7 +749,7 @@ export function LeonidaMapTab({
                 </p>
                 {selectedMarker.reward && (
                   <p className="text-xs text-[#00F0FF] mt-2 font-medium">
-                    Belöning: {selectedMarker.reward}
+                    {t.common.rewardLabel}: {selectedMarker.reward}
                   </p>
                 )}
               </div>
@@ -767,8 +767,8 @@ export function LeonidaMapTab({
                   <Check size={17} strokeWidth={2.5} />
                   <span>
                     {foundSet.has(selectedMarker.id)
-                      ? 'Markerad som hittad (ångra)'
-                      : 'Markera som hittad'}
+                      ? t.map.markedFoundUndo
+                      : t.map.markFound}
                   </span>
                 </button>
 
@@ -779,7 +779,7 @@ export function LeonidaMapTab({
                       await onDeleteCustomMarker(selectedMarker.id);
                       setSelectedMarkerId(null);
                     }}
-                    aria-label="Ta bort egen markör"
+                    aria-label={t.map.deleteCustomAria}
                     className="min-h-[46px] min-w-[46px] px-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 hover:bg-rose-500/25 flex items-center justify-center cursor-pointer"
                   >
                     <Trash2 size={18} />
@@ -803,16 +803,16 @@ export function LeonidaMapTab({
             <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/10">
               <div>
                 <h2 id="add-marker-title" className="font-display text-lg font-bold text-white">
-                  Ny egen markör
+                  {t.map.newMarkerTitle}
                 </h2>
                 <p className="text-xs font-mono tabular-nums text-slate-400">
-                  Koordinater: {draftCoords.x}%, {draftCoords.y}%
+                  {t.map.coordinatesLabel}: {draftCoords.x}%, {draftCoords.y}%
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setDraftCoords(null)}
-                aria-label="Avbryt"
+                aria-label={t.common.cancel}
                 className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-xl text-slate-400 hover:text-white cursor-pointer"
               >
                 <X size={20} />
@@ -822,7 +822,7 @@ export function LeonidaMapTab({
             <form onSubmit={handleSaveCustomMarker} className="mt-4 space-y-3.5">
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Namn på plats *
+                  {t.map.fieldName}
                 </label>
                 <input
                   type="text"
@@ -830,14 +830,14 @@ export function LeonidaMapTab({
                   autoFocus
                   value={draftTitle}
                   onChange={(e) => setDraftTitle(e.target.value)}
-                  placeholder="t.ex. Hemligt garage bakom klubben"
+                  placeholder={t.map.fieldNamePlaceholder}
                   className="w-full min-h-[44px] px-3.5 py-2 rounded-xl bg-[#0D0F14] border border-white/10 text-sm text-white focus:outline-none focus:border-[#00F0FF]"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Kategori
+                  {t.map.fieldCategory}
                 </label>
                 <select
                   value={draftCategory}
@@ -846,7 +846,7 @@ export function LeonidaMapTab({
                 >
                   {ALL_CATEGORIES.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.id}
+                      {t.markerCategories[c.id]}
                     </option>
                   ))}
                 </select>
@@ -854,13 +854,13 @@ export function LeonidaMapTab({
 
               <div>
                 <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  Anteckning
+                  {t.map.fieldNotes}
                 </label>
                 <textarea
                   rows={2}
                   value={draftDesc}
                   onChange={(e) => setDraftDesc(e.target.value)}
-                  placeholder="Valfri beskrivning eller påminnelse..."
+                  placeholder={t.map.fieldNotesPlaceholder}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#0D0F14] border border-white/10 text-sm text-white focus:outline-none focus:border-[#00F0FF]"
                 />
               </div>
@@ -871,14 +871,14 @@ export function LeonidaMapTab({
                   onClick={() => setDraftCoords(null)}
                   className="min-h-[44px] px-4 py-2 rounded-xl border border-white/10 text-sm text-slate-300 hover:bg-white/5 cursor-pointer"
                 >
-                  Avbryt
+                  {t.common.cancel}
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingMarker}
                   className="min-h-[44px] px-5 py-2 rounded-xl bg-[#FF2A85] hover:bg-[#e52275] text-sm font-semibold text-white cursor-pointer"
                 >
-                  {isSavingMarker ? 'Sparar...' : 'Spara markör'}
+                  {isSavingMarker ? t.common.saving : t.map.saveMarkerBtn}
                 </button>
               </div>
             </form>

@@ -1,5 +1,6 @@
 import { Check, ChevronDown, RotateCcw } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useTranslation } from '../i18n/translations';
 import { ChecklistCategoryId, ChecklistCategoryMeta, ChecklistItem } from '../types';
 
 interface ChecklistTabProps {
@@ -19,6 +20,8 @@ export function ChecklistTab({
   onToggleItem,
   onResetProgress,
 }: ChecklistTabProps) {
+  const { t, localizeChecklistCategory, localizeChecklistItem } = useTranslation();
+
   const [filter, setFilter] = useState<ChecklistFilter>('all');
   const [openCategories, setOpenCategories] = useState<Record<ChecklistCategoryId, boolean>>({
     main_missions: true,
@@ -31,8 +34,18 @@ export function ChecklistTab({
 
   const completedSet = useMemo(() => new Set(completedIds), [completedIds]);
 
-  const totalCount = items.length;
-  const completedCount = items.filter((item) => completedSet.has(item.id)).length;
+  const localizedCategories = useMemo(
+    () => categories.map((cat) => localizeChecklistCategory(cat)),
+    [categories, localizeChecklistCategory]
+  );
+
+  const localizedItems = useMemo(
+    () => items.map((item) => localizeChecklistItem(item)),
+    [items, localizeChecklistItem]
+  );
+
+  const totalCount = localizedItems.length;
+  const completedCount = localizedItems.filter((item) => completedSet.has(item.id)).length;
   const overallPercent =
     totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
@@ -46,14 +59,12 @@ export function ChecklistTab({
       <div className="leonida-glass rounded-2xl p-5 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-medium text-[#00F0FF] mb-1">
-              Grand Theft Auto VI · Karriärspårning
-            </p>
+            <p className="text-xs font-medium text-[#00F0FF] mb-1">{t.checklist.kicker}</p>
             <h1
               id="checklist-heading"
               className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-white"
             >
-              100% Completion-checklista
+              {t.checklist.title}
             </h1>
           </div>
 
@@ -62,7 +73,7 @@ export function ChecklistTab({
               {overallPercent}%
             </span>
             <span className="font-mono text-xs sm:text-sm tabular-nums text-slate-400">
-              {completedCount} / {totalCount} avklarade
+              {completedCount} / {totalCount} {t.checklist.completedOfTotal}
             </span>
           </div>
         </div>
@@ -73,7 +84,7 @@ export function ChecklistTab({
           aria-valuenow={overallPercent}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label="Total 100 procent completion"
+          aria-label={t.checklist.progressAria}
           className="mt-4 h-3 w-full rounded-full bg-[#0D0F14] border border-white/10 overflow-hidden"
         >
           <div
@@ -86,14 +97,14 @@ export function ChecklistTab({
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
           <div
             role="tablist"
-            aria-label="Filtrera checklista"
+            aria-label={t.checklist.title}
             className="inline-flex items-center p-1 rounded-xl bg-[#0D0F14] border border-white/10"
           >
             {(
               [
-                { id: 'all', label: 'Alla' },
-                { id: 'remaining', label: 'Kvarvarande' },
-                { id: 'completed', label: 'Avklarade' },
+                { id: 'all', label: t.checklist.filterAll },
+                { id: 'remaining', label: t.checklist.filterRemaining },
+                { id: 'completed', label: t.checklist.filterCompleted },
               ] as const
             ).map((tab) => {
               const active = filter === tab.id;
@@ -121,7 +132,7 @@ export function ChecklistTab({
               className="inline-flex items-center gap-1.5 min-h-[38px] px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors cursor-pointer"
             >
               <RotateCcw size={14} />
-              <span>Nollställ framsteg</span>
+              <span>{t.checklist.resetBtn}</span>
             </button>
           ) : (
             <div className="flex items-center gap-2">
@@ -133,14 +144,14 @@ export function ChecklistTab({
                 }}
                 className="min-h-[36px] px-3 py-1 rounded-lg bg-rose-500/20 border border-rose-500/40 text-xs font-semibold text-rose-200 hover:bg-rose-500/30 cursor-pointer"
               >
-                Bekräfta nollställning
+                {t.checklist.confirmResetBtn}
               </button>
               <button
                 type="button"
                 onClick={() => setConfirmReset(false)}
                 className="min-h-[36px] px-3 py-1 rounded-lg text-xs text-slate-400 hover:text-white cursor-pointer"
               >
-                Avbryt
+                {t.common.cancel}
               </button>
             </div>
           )}
@@ -149,8 +160,8 @@ export function ChecklistTab({
 
       {/* Collapsible Categories */}
       <div className="space-y-4">
-        {categories.map((cat) => {
-          const catItems = items.filter((item) => item.categoryId === cat.id);
+        {localizedCategories.map((cat) => {
+          const catItems = localizedItems.filter((item) => item.categoryId === cat.id);
           const catCompleted = catItems.filter((item) => completedSet.has(item.id)).length;
           const catPercent =
             catItems.length > 0 ? Math.round((catCompleted / catItems.length) * 100) : 0;
@@ -208,7 +219,7 @@ export function ChecklistTab({
                 <div className="border-t border-white/[0.07] divide-y divide-white/[0.06]">
                   {visibleItems.length === 0 ? (
                     <div className="px-5 py-4 text-xs text-slate-500">
-                      Inga moment matchar aktuellt filter i denna kategori.
+                      {t.checklist.emptyCategory}
                     </div>
                   ) : (
                     visibleItems.map((item) => {
@@ -257,7 +268,7 @@ export function ChecklistTab({
                                 <>
                                   <span className="mx-1.5 text-slate-600">·</span>
                                   <span className={checked ? 'text-slate-600' : 'text-[#FF2A85]'}>
-                                    Belöning: {item.reward}
+                                    {t.common.rewardLabel}: {item.reward}
                                   </span>
                                 </>
                               )}
